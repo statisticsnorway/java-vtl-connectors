@@ -96,6 +96,13 @@
             <version>1.10.19</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+            <scope>test</scope>
+        </dependency>
+
 
     </dependencies>
 
@@ -108,16 +115,18 @@
                 <version>1.13</version>
                 <configuration>
                     <licenseName>apache_v2</licenseName>
+                    <failOnMissingHeader>true</failOnMissingHeader>
                     <processStartTag>========================LICENSE_START=================================</processStartTag>
                     <processEndTag>=========================LICENSE_END==================================</processEndTag>
                 </configuration>
                 <executions>
                     <execution>
                         <id>first</id>
+                        <phase>validate</phase>
                         <goals>
-                            <goal>update-file-header</goal>
+                            <goal>check-file-header</goal>
+                            <!-- <goal>update-file-header</goal> -->
                         </goals>
-                        <phase>process-sources</phase>
                     </execution>
                 </executions>
             </plugin>
