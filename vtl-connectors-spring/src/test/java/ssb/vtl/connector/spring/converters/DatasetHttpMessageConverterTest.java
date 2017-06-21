@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import static com.google.common.io.Resources.getResource;
-import static no.ssb.vtl.tools.sandbox.connector.spring.converters.DatasetHttpMessageConverter.SUPPORTED_TYPES;
+import static ssb.vtl.connector.spring.converters.DatasetHttpMessageConverter.SUPPORTED_TYPES;
 
 public class DatasetHttpMessageConverterTest {
 

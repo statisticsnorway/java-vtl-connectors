@@ -1,0 +1,30 @@
+{
+  "structure": [{
+    "name": "ICINTEGER",
+    "role": "IDENTIFIER",
+    "type": "INTEGER"
+  }, {
+    "name": "ICNUMERIC",
+    "role": "IDENTIFIER",
+    "type": "NUMERIC"
+  }, {
+    "name": "ICDATE",
+    "role": "IDENTIFIER",
+    "type": "DATE"
+  }, {
+    "name": "MCSTRING",
+    "role": "MEASURE",
+    "type": "STRING"
+  }, {
+    "name": "ACBOOLEAN",
+    "role": "ATTRIBUTE",
+    "type": "BOOLEAN"
+  }],
+  "data": [
+    [0, 0, "1970-01-01T00:02:03Z", "Foo", false],
+    [-1, -1.5, "1970-01-01T00:02:03.123Z", "Bar", true],
+    [0, 0, "1970-01-01T00:02:03.123456Z", "Foo", "false"],
+    [-1, -1, "1970-01-01T00:02:03.123456789Z", "Bar", "true"],
+    [1, 1, "1970-01-01T00:02:03Z", "Foo", false]
+  ]
+}

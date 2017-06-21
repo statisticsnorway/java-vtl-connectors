@@ -13,8 +13,8 @@ import org.springframework.http.HttpInputMessage;
 import java.time.Instant;
 import java.util.function.BiFunction;
 
-import static no.ssb.vtl.tools.sandbox.connector.spring.converters.DataStructureHttpConverter.MEDIA_TYPE;
-import static no.ssb.vtl.tools.sandbox.connector.spring.converters.DatasetHttpMessageConverterTest.loadFile;
+import static ssb.vtl.connector.spring.converters.DataStructureHttpConverter.MEDIA_TYPE;
+import static ssb.vtl.connector.spring.converters.DatasetHttpMessageConverterTest.loadFile;
 
 public class DataStructureHttpConverterTest {
 

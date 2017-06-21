@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.Dataset;
-import no.ssb.vtl.tools.sandbox.connector.spring.converters.DataHttpConverter;
 import org.junit.Test;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+import ssb.vtl.connector.spring.converters.DataHttpConverter;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,7 +33,7 @@ public class RestClientConnectorTest {
         RestTemplate template = new RestTemplate(schrf);
 
         template.getInterceptors().add(
-                new RestTemplateConnectorTest.AuthorizationTokenInterceptor()
+                new AuthorizationTokenInterceptor()
         );
 
         ObjectMapper mapper = new ObjectMapper();

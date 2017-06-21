@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static no.ssb.vtl.tools.sandbox.connector.spring.BlockingQueueSpliterator.EOS;
+import static ssb.vtl.connector.spring.BlockingQueueSpliterator.EOS;
 
 /**
  * A connector that relies on {@link RestTemplate}.

@@ -1,0 +1,109 @@
+[
+  [
+    {
+      "type": "STRING",
+      "val": "France"
+    },
+    {
+      "type": "DATE",
+      "val": "2001-01-01T01:01:01.001Z"
+    },
+    {
+      "type": "NUMERIC",
+      "val": 1.1
+    },
+    {
+      "type": "INTEGER",
+      "val": 1
+    },
+    {
+      "type": "BOOLEAN",
+      "val": true
+    }
+  ],
+  [
+    {
+      "type": "STRING",
+      "val": "Norway"
+    },
+    {
+      "type": "DATE",
+      "val": "2002-02-02T02:02:02.002Z"
+    },
+    {
+      "type": "NUMERIC",
+      "val": 2.2
+    },
+    {
+      "type": "INTEGER",
+      "val": 2
+    },
+    {
+      "type": "BOOLEAN",
+      "val": false
+    }
+  ],
+  [
+    {
+      "type": "STRING",
+      "val": "Sweden"
+    },
+    {
+      "type": "DATE",
+      "val": "2003-03-03T03:03:03.003Z"
+    },
+    {
+      "type": "NUMERIC",
+      "val": 3.3
+    },
+    {
+      "type": "INTEGER",
+      "val": 3
+    },
+    {
+      "type": "BOOLEAN",
+      "val": true
+    }
+  ],
+  [
+    {
+      "type": "STRING",
+      "val": "Denmark"
+    },
+    {
+      "type": "DATE",
+      "val": "2004-04-04T04:04:04.004Z"
+    },
+    {
+      "type": "NUMERIC",
+      "val": 4.4
+    },
+    {
+      "type": "INTEGER",
+      "val": 4
+    },
+    {
+      "type": "BOOLEAN",
+      "val": null
+    }
+  ],
+  [
+    {
+      "type": "STRING",
+      "val": "Italy"
+    },
+    {
+      "type": "DATE",
+      "val": "2005-05-05T05:05:05.005Z"
+    },
+    {
+      "type": "NUMERIC",
+      "val": 5.5
+    },
+    {
+      "type": "INTEGER",
+      "val": 5
+    },
+    null
+  ]
+]
