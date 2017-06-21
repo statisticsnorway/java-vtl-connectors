@@ -17,7 +17,7 @@ import java.util.stream.Stream;
 /**
  * Created by hadrien on 13/06/17.
  */
-public class RestClientConnectorTest {
+public class RestTemplateConnectorTest {
 
     @Test
     public void getData() throws Exception {
@@ -42,12 +42,12 @@ public class RestClientConnectorTest {
                 0, new DataHttpConverter(mapper)
         );
 
-        RestClientConnector restClientConnector = new RestClientConnector(
+        RestTemplateConnector restTemplateConnector = new RestTemplateConnector(
                 template,
                 executorService
         );
 
-        Dataset dataset = restClientConnector.getDataset("http://www.mocky.io/v2/594a48ee10000081031aa3fc");
+        Dataset dataset = restTemplateConnector.getDataset("http://www.mocky.io/v2/594a48ee10000081031aa3fc");
         Stream<DataPoint> data = dataset.getData();
         data.forEach(System.out::println);
 

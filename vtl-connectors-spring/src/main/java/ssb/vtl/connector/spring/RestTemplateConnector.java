@@ -43,9 +43,9 @@ import static ssb.vtl.connector.spring.BlockingQueueSpliterator.EOS;
  * This class solves this issue by executing the requests in a thread pools and
  * transfer the result to a wrapped stream.
  */
-public class RestClientConnector implements Connector {
+public class RestTemplateConnector implements Connector {
 
-    private static final Logger log = LoggerFactory.getLogger(RestClientConnector.class);
+    private static final Logger log = LoggerFactory.getLogger(RestTemplateConnector.class);
 
     public static final ParameterizedTypeReference<Stream<DataPoint>> DATAPOINT_STREAM_TYPE;
 
@@ -58,7 +58,7 @@ public class RestClientConnector implements Connector {
     private final ExecutorService executorService;
     private final WrappedRestTemplate template;
 
-    public RestClientConnector(RestTemplate template, ExecutorService executorService) {
+    public RestTemplateConnector(RestTemplate template, ExecutorService executorService) {
         this.template = new WrappedRestTemplate(checkNotNull(template));
         this.executorService = checkNotNull(executorService);
     }
@@ -199,7 +199,7 @@ public class RestClientConnector implements Connector {
         @Override
         public Stream<DataPoint> getData() {
             // Always return a new stream.
-            return RestClientConnector.this.getData(uri);
+            return RestTemplateConnector.this.getData(uri);
         }
 
         @Override
@@ -217,7 +217,7 @@ public class RestClientConnector implements Connector {
             if (structure != null)
                 return structure;
 
-            structure = RestClientConnector.this.getStructure(uri);
+            structure = RestTemplateConnector.this.getStructure(uri);
             return structure;
         }
     }
