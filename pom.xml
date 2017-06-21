@@ -31,6 +31,9 @@
     <url>https://github.com/statisticsnorway/java-vtl-connectors</url>
 
     <inceptionYear>2017</inceptionYear>
+    <organization>
+        <name>Statistics Norway and contributors</name>
+    </organization>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -98,6 +101,26 @@
 
     <build>
         <plugins>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>1.13</version>
+                <configuration>
+                    <licenseName>apache_v2</licenseName>
+                    <processStartTag>========================LICENSE_START=================================</processStartTag>
+                    <processEndTag>=========================LICENSE_END==================================</processEndTag>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>first</id>
+                        <goals>
+                            <goal>update-file-header</goal>
+                        </goals>
+                        <phase>process-sources</phase>
+                    </execution>
+                </executions>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

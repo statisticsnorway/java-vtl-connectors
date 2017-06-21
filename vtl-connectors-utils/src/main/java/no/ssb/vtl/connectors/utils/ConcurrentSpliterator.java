@@ -1,5 +1,7 @@
 package no.ssb.vtl.connectors.utils;
 
+
+
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;

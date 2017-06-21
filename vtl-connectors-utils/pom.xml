@@ -13,6 +13,8 @@
     <artifactId>vtl-connectors-utils</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
+    <name>Java VTL Utility connectors</name>
+
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -20,5 +22,6 @@
             <version>1.8.0-alpha2</version>
         </dependency>
     </dependencies>
+
 
 </project>
