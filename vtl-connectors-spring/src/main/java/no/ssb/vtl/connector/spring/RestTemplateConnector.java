@@ -124,12 +124,12 @@ public class RestTemplateConnector implements Connector {
             if (allowed.contains(HttpMethod.HEAD)) {
                 // TODO: Maybe check for content types?
                 template.headForHeaders(uri);
-                return true;
+
             }
         } catch (RestClientResponseException rcre) {
             return false;
         }
-        return false;
+        return true;
     }
 
     @Override
