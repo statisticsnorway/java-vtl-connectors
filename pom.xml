@@ -18,6 +18,12 @@
     <groupId>no.ssb.vtl</groupId>
     <artifactId>java-vtl-connectors-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>vtl-connectors-utils</module>
+        <module>vtl-connectors-spring</module>
+    </modules>
 
     <name>Java VTL connectors</name>
 
