@@ -20,10 +20,13 @@ package no.ssb.vtl.connector.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SequenceWriter;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.VTLObject;
@@ -39,11 +42,11 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.toList;
 
 /**
  * A converter that can read and write data point streams.
@@ -96,11 +99,27 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
     }
 
     /**
-     * @see DataHttpConverter#canRead(TypeToken, MediaType)
+     * @see DataHttpConverter#canWrite(TypeToken, MediaType)
+     */
+    @Override
+    public boolean canWrite(Class<?> clazz, MediaType mediaType) {
+        return canWrite(TypeToken.of(clazz), mediaType);
+    }
+
+    /**
+     * @see DataHttpConverter#canWrite(TypeToken, MediaType)
      */
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
-        return super.canWrite(type, clazz, mediaType);
+        return canWrite(TypeToken.of(type), mediaType);
+    }
+
+    /**
+     * @see #canWrite(Type, Class, MediaType)
+     * @see #canWrite(Class, MediaType)
+     */
+    private boolean canWrite(TypeToken<?> token, MediaType mediaType) {
+        return token.isSubtypeOf(SUPPORTED_TYPE) && canRead(mediaType);
     }
 
     /**
@@ -137,7 +156,7 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      * @see #canRead(Class, MediaType)
      */
     private boolean canRead(TypeToken<?> token, MediaType mediaType) {
-        return token.isSubtypeOf(SUPPORTED_TYPE) && canRead(mediaType);
+        return token.isSupertypeOf(SUPPORTED_TYPE) && canRead(mediaType);
     }
 
     @Override
@@ -161,7 +180,7 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
         return rawStream.map(pointWrappers -> {
             return pointWrappers.stream()
                     .map(this::toVTLObject)
-                    .collect(Collectors.toList()
+                    .collect(toList()
                     );
         }).map(DataPoint::create);
     }
@@ -177,8 +196,32 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
 
 
     @Override
-    protected void writeInternal(Stream stream, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
-        // TODO.
+    protected void writeInternal(Stream<DataPoint> stream, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
+        JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody());
+        generator.writeStartArray();
+
+        ObjectWriter writer = mapper.writerFor(LIST_TYPE_REFERENCE);
+        SequenceWriter sequenceWriter = writer.writeValues(generator);
+        for (DataPoint point : (Iterable<DataPoint>) stream::iterator) {
+            List<VTLObjectWrapper> wrapped = point.stream()
+                    .map(this::fromVTLObject)
+                    .collect(toList());
+            sequenceWriter.write(wrapped);
+        }
+        generator.writeEndArray();
+    }
+
+    private VTLObjectWrapper fromVTLObject(VTLObject object) {
+        // TODO: Reuse same object to improve perf.
+        VTLObjectWrapper wrapper = new VTLObjectWrapper();
+        if (object == null || object.get() == null)
+            return null;
+
+        Class<?> type = object.get().getClass();
+        wrapper.setType(RoleMapping.fromType(type));
+        wrapper.setVal(object.get());
+
+        return wrapper;
     }
 
     private VTLObject toVTLObject(VTLObjectWrapper VTLObjectWrapper) {

@@ -24,27 +24,39 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.DataPoint;
+import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.VTLObject;
+import org.assertj.core.api.JUnitSoftAssertions;
+import org.assertj.core.util.Lists;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.mock.http.MockHttpInputMessage;
+import org.springframework.mock.http.MockHttpOutputMessage;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.google.common.io.Resources.getResource;
 import static java.time.Instant.parse;
 import static java.util.stream.Collectors.toList;
+import static no.ssb.vtl.connector.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
 public class DataHttpConverterTest {
 
     private DataHttpConverter converter;
+
+    @Rule
+    public final JUnitSoftAssertions softly = new JUnitSoftAssertions();
+    public static final TypeToken<Stream<DataPoint>> TYPE = new TypeToken<Stream<DataPoint>>() {
+    };
 
     @Before
     public void setUp() throws Exception {
@@ -53,6 +65,32 @@ public class DataHttpConverterTest {
         mapper.registerModule(new JavaTimeModule());
 
         converter = new DataHttpConverter(mapper);
+    }
+
+    @Test
+    public void testWriteDataVersion2() throws Exception {
+        Stream<DataPoint> dataPointStream = IntStream.rangeClosed(1, 10)
+                .boxed()
+                .map(integer -> {
+                    List<VTLObject> points = Lists.newArrayList(
+                            VTLObject.of("string" + integer),
+                            VTLObject.of(Instant.ofEpochSecond(integer)),
+                            VTLObject.of(integer % 2 == 0),
+                            VTLObject.of(integer),
+                            VTLObject.of(Double.valueOf(integer))
+                    );
+                    return DataPoint.create(points);
+                });
+
+        MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+
+        converter.write(
+                dataPointStream,
+                APPLICATION_SSB_DATASET_DATA_JSON_V2,
+                outputMessage
+        );
+
+        System.out.println(outputMessage.getBodyAsString());
     }
 
     @Test
@@ -91,6 +129,52 @@ public class DataHttpConverterTest {
                         "Italy", parse("2005-05-05T05:05:05.005Z"), 5.5, 5L, null
                 );
     }
+
+    @Test
+    public void testCanRead() throws Exception {
+        softly.assertThat(
+
+                converter.canRead(TYPE.getType(), null, APPLICATION_SSB_DATASET_DATA_JSON_V2)
+
+        ).as(
+                "supports reading class %s with media type %s",
+                TYPE, APPLICATION_SSB_DATASET_DATA_JSON_V2
+        ).isTrue();
+
+        softly.assertThat(
+
+                converter.canRead(ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2)
+
+        ).as(
+                "supports reading subclass %s with media type %s",
+                ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
+
+        ).isFalse();
+    }
+
+    @Test
+    public void canWrite() throws Exception {
+
+        softly.assertThat(
+
+                converter.canWrite(TYPE.getType(), null, APPLICATION_SSB_DATASET_DATA_JSON_V2)
+
+        ).as(
+                "supports writing class %s with media type %s",
+                DataStructure.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
+        ).isTrue();
+
+        softly.assertThat(
+
+                converter.canWrite(ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2)
+
+        ).as(
+                "supports writing subclass %s with media type %s",
+                ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
+        ).isTrue();
+    }
+
+    private interface ExetendedStream extends Stream<DataPoint> {}
 
     private HttpInputMessage loadFile(String name) throws IOException {
         InputStream stream = getResource(name).openStream();
