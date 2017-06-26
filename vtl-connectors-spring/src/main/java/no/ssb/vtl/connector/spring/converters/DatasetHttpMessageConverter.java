@@ -133,18 +133,22 @@ class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConverter {
 
         JsonParser parser = mapper.getFactory().createParser(inputMessage.getBody());
 
-        // Advance to { "": { <--
+        // Advance to { "": [ <--
         checkToken(parser, parser.nextValue(), JsonToken.START_OBJECT);
         checkToken(parser, parser.nextValue(), JsonToken.START_ARRAY);
 
-        // Expect { "structure": {
+        // Expect { "structure": [
         checkCurrentName(parser, "structure");
 
         DataStructure structure = structureConverter.readWithParser(parser);
 
-        // Advance to { "structure": {}, "" : { <--
+        // Advance to { "structure": {}, "" : [ <--
         checkToken(parser, parser.nextValue(), JsonToken.START_ARRAY);
+
+        // Expect { "data": [
         checkCurrentName(parser, "data");
+
+        parser.nextValue();
 
         MappingIterator<List<Object>> data = mapper.readerFor(LIST_TYPE_REFERENCE)
                 .readValues(parser);
