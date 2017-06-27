@@ -1,4 +1,4 @@
-package no.ssb.vtl.connector.spring.nonclosing;
+package no.ssb.vtl.connectors.spring.nonclosing;
 
 /*-
  * ========================LICENSE_START=================================

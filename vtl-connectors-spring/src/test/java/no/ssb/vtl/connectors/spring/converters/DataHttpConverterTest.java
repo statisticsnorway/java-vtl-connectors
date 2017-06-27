@@ -1,4 +1,4 @@
-package no.ssb.vtl.connector.spring.converters;
+package no.ssb.vtl.connectors.spring.converters;
 
 /*-
  * ========================LICENSE_START=================================
@@ -45,7 +45,7 @@ import java.util.stream.Stream;
 import static com.google.common.io.Resources.getResource;
 import static java.time.Instant.parse;
 import static java.util.stream.Collectors.toList;
-import static no.ssb.vtl.connector.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
+import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 

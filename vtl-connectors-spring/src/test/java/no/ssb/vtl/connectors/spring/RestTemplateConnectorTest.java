@@ -1,4 +1,4 @@
-package no.ssb.vtl.connector.spring;
+package no.ssb.vtl.connectors.spring;
 
 /*-
  * ========================LICENSE_START=================================
@@ -28,7 +28,7 @@ import org.junit.Test;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
-import no.ssb.vtl.connector.spring.converters.DataHttpConverter;
+import no.ssb.vtl.connectors.spring.converters.DataHttpConverter;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

@@ -1,4 +1,4 @@
-package no.ssb.vtl.connector.spring.converters;
+package no.ssb.vtl.connectors.spring.converters;
 
 /*-
  * ========================LICENSE_START=================================
@@ -42,8 +42,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import static com.google.common.io.Resources.getResource;
-import static no.ssb.vtl.connector.spring.converters.DatasetHttpMessageConverter.APPLICATION_DATASET_JSON;
-import static no.ssb.vtl.connector.spring.converters.DatasetHttpMessageConverter.SUPPORTED_TYPES;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DatasetHttpMessageConverterTest {
@@ -59,7 +57,7 @@ public class DatasetHttpMessageConverterTest {
     );
 
     private Set<MediaType> supportedTypes = ImmutableSet.copyOf(
-            SUPPORTED_TYPES
+            DatasetHttpMessageConverter.SUPPORTED_TYPES
     );
     private ObjectMapper mapper;
 
@@ -89,7 +87,7 @@ public class DatasetHttpMessageConverterTest {
         Dataset result = (Dataset) converter.read(Dataset.class, message);
 
         MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
-        converter.write(result, APPLICATION_DATASET_JSON, outputMessage);
+        converter.write(result, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage);
 
         // Go full circle!
         JsonNode original = mapper.readTree(loadFile("ssb.dataset+json;version=2" + ".json").getBody());

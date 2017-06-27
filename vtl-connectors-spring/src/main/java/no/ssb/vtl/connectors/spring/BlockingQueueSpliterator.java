@@ -1,4 +1,4 @@
-package no.ssb.vtl.connector.spring;
+package no.ssb.vtl.connectors.spring;
 
 /*-
  * ========================LICENSE_START=================================
