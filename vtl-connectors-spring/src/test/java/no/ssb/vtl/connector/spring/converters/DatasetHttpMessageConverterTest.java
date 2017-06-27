@@ -20,6 +20,7 @@ package no.ssb.vtl.connector.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -33,6 +34,7 @@ import org.junit.Test;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
 import org.springframework.mock.http.MockHttpInputMessage;
+import org.springframework.mock.http.MockHttpOutputMessage;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +42,9 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import static com.google.common.io.Resources.getResource;
+import static no.ssb.vtl.connector.spring.converters.DatasetHttpMessageConverter.APPLICATION_DATASET_JSON;
 import static no.ssb.vtl.connector.spring.converters.DatasetHttpMessageConverter.SUPPORTED_TYPES;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class DatasetHttpMessageConverterTest {
 
@@ -57,6 +61,7 @@ public class DatasetHttpMessageConverterTest {
     private Set<MediaType> supportedTypes = ImmutableSet.copyOf(
             SUPPORTED_TYPES
     );
+    private ObjectMapper mapper;
 
     static HttpInputMessage loadFile(String name) throws IOException {
         InputStream stream = getResource(name).openStream();
@@ -65,7 +70,8 @@ public class DatasetHttpMessageConverterTest {
 
     @Before
     public void setUp() throws Exception {
-        converter = new DatasetHttpMessageConverter(new ObjectMapper());
+        mapper = new ObjectMapper();
+        converter = new DatasetHttpMessageConverter(mapper);
     }
 
     @Test
@@ -74,6 +80,22 @@ public class DatasetHttpMessageConverterTest {
 
         Dataset result = (Dataset) converter.read(DataStructure.class, message);
         System.out.println(result);
+    }
+
+    @Test
+    public void testWriteDatasetVersion2() throws Exception {
+
+        HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");
+        Dataset result = (Dataset) converter.read(Dataset.class, message);
+
+        MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+        converter.write(result, APPLICATION_DATASET_JSON, outputMessage);
+
+        // Go full circle!
+        JsonNode original = mapper.readTree(loadFile("ssb.dataset+json;version=2" + ".json").getBody());
+        JsonNode written = mapper.readTree(outputMessage.getBodyAsBytes());
+
+        assertThat(written).isEqualTo(original);
     }
 
     private static class ExtendedDataStructure extends DataStructure {

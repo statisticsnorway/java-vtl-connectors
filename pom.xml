@@ -118,6 +118,9 @@
                     <failOnMissingHeader>true</failOnMissingHeader>
                     <processStartTag>========================LICENSE_START=================================</processStartTag>
                     <processEndTag>=========================LICENSE_END==================================</processEndTag>
+                    <excludes>
+                        <exclude>**/*.json</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>

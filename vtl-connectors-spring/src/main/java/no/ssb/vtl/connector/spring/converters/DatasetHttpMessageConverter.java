@@ -20,6 +20,7 @@ package no.ssb.vtl.connector.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -28,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
@@ -42,6 +44,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,19 +56,18 @@ import java.util.stream.StreamSupport;
 
 /**
  * A converter that support the following conversions
- *
+ * <p>
  * Read:
  * application/ssb.dataset+json;version=2 -> DataStructure
  * application/ssb.dataset+json;version=2 -> Stream<DataPoint>
- *
+ * <p>
  * Write:
- *
+ * <p>
  * Dataset -> application/ssb.dataset+json;version=2
  * Dataset -> application/ssb.dataset.data+json;version=2
  * Dataset -> application/ssb.dataset.structure+json;version=2
- *
  */
-class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConverter {
+public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConverter {
 
     public static final String APPLICATION_DATASET_JSON_VALUE = "application/ssb.dataset+json;version=2";
 
@@ -191,7 +193,54 @@ class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConverter {
 
     @Override
     protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
-        super.writeInternal(object, type, outputMessage);
+
+        if (object instanceof Dataset) {
+            Dataset dataset = (Dataset) object;
+
+            ObjectMapper mapper = getObjectMapper();
+
+            try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
+
+
+                generator.writeStartObject();
+
+//            "name": "MCSTRING",
+//            "role": "MEASURE",
+//            "type": "STRING"
+
+                generator.writeArrayFieldStart("structure");
+                for (Map.Entry<String, Component> variable : dataset.getDataStructure().entrySet()) {
+                    Component component = variable.getValue();
+
+                    generator.writeStartObject();
+                    generator.writeStringField("name", variable.getKey());
+                    generator.writeStringField("role", component.getRole().name());
+                    generator.writeStringField("type", RoleMapping.fromType(component.getType()).name());
+                    generator.writeEndObject();
+
+                }
+                generator.writeEndArray();
+
+                generator.writeArrayFieldStart("data");
+
+                try (Stream<DataPoint> data = dataset.getData()) {
+                    Iterator<DataPoint> it = data.iterator();
+                    while (it.hasNext()) {
+                        DataPoint next = it.next();
+                        generator.writeStartArray(next.size());
+                        for (VTLObject obj : next) {
+                            mapper.writeValue(generator, obj.get());
+                        }
+                        generator.writeEndArray();
+                    }
+                }
+
+                generator.writeEndArray();
+                generator.writeEndObject();
+
+            }
+
+        }
     }
 
     private static void checkArgument(JsonParser parser, boolean check, String message) throws JsonMappingException {
