@@ -20,6 +20,7 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +35,7 @@ import org.springframework.http.converter.HttpMessageNotWritableException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -56,10 +58,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class DataStructureHttpConverter extends AbstractHttpMessageConverter<DataStructure> {
 
-    public static final String MEDIA_TYPE_VALUE = "application/ssb.dataset.structure+json";
-    public static final String MEDIA_TYPE_VALUE2 = "application/x-ssb.dataset.structure+json";
+    public static final String APPLICATION_SSB_DATASET_STRUCTURE_JSON_VALUE = "application/ssb.dataset.structure+json";
+    public static final String APPLICATION_X_SSB_DATASET_STRUCTURE_JSON_VALUE = "application/x-ssb.dataset.structure+json";
 
-    public static final MediaType MEDIA_TYPE = MediaType.parseMediaType(MEDIA_TYPE_VALUE);
+    public static final MediaType APPLICATION_SSB_DATASET_STRUCTURE_JSON = MediaType.parseMediaType(APPLICATION_SSB_DATASET_STRUCTURE_JSON_VALUE);
+    public static final MediaType APPLICATION_X_SSB_DATASET_STRUCTURE_JSON = MediaType.parseMediaType(APPLICATION_SSB_DATASET_STRUCTURE_JSON_VALUE);
 
     private final ObjectMapper mapper;
 
@@ -72,7 +75,7 @@ public class DataStructureHttpConverter extends AbstractHttpMessageConverter<Dat
     }
 
     public DataStructureHttpConverter(ObjectMapper mapper) {
-        this(MEDIA_TYPE, mapper);
+        this(APPLICATION_SSB_DATASET_STRUCTURE_JSON, mapper);
     }
 
     @Override
@@ -82,7 +85,7 @@ public class DataStructureHttpConverter extends AbstractHttpMessageConverter<Dat
 
     @Override
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
-        return DataStructure.class.isAssignableFrom(clazz) && canWrite(mediaType);
+        return canWrite(mediaType) && DataStructure.class.isAssignableFrom(clazz);
     }
 
     @Override
@@ -112,7 +115,24 @@ public class DataStructureHttpConverter extends AbstractHttpMessageConverter<Dat
 
     @Override
     protected void writeInternal(DataStructure dataStructure, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
+        try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
+            generator.writeStartArray(dataStructure.size());
+            writeWithParser(dataStructure, generator);
+            generator.writeEndArray();
+        }
+    }
 
+    void writeWithParser(DataStructure dataStructure, JsonGenerator generator) throws IOException {
+        // TODO: Reuse in dataset.
+        for (Map.Entry<String, Component> variable : dataStructure.entrySet()) {
+            Component component = variable.getValue();
+
+            generator.writeStartObject();
+            generator.writeStringField("name", variable.getKey());
+            generator.writeStringField("role", component.getRole().name());
+            generator.writeStringField("type", RoleMapping.fromType(component.getType()).name());
+            generator.writeEndObject();
+        }
     }
 
     private static class DataStructureWrapper {

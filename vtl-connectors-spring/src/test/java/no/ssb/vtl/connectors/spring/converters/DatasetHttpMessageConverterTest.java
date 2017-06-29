@@ -20,11 +20,13 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import no.ssb.vtl.model.Component;
+import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
 import org.assertj.core.api.JUnitSoftAssertions;
@@ -40,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import static com.google.common.io.Resources.getResource;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,7 +79,25 @@ public class DatasetHttpMessageConverterTest {
     public void testReadDatasetVersion2() throws Exception {
         HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");
 
-        Dataset result = (Dataset) converter.read(DataStructure.class, message);
+        Dataset result = (Dataset) converter.read(Dataset.class, message);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testReadDataStructureVersion2() throws Exception {
+        HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");
+
+        DataStructure result = (DataStructure) converter.read(DataStructure.class, message);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testReadDataVersion2() throws Exception {
+        HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");
+
+        TypeReference<Stream<DataPoint>> TYPE = new TypeReference<Stream<DataPoint>>() {
+        };
+        Stream<DataPoint> result = (Stream<DataPoint>) converter.read(TYPE.getType(), null, message);
         System.out.println(result);
     }
 

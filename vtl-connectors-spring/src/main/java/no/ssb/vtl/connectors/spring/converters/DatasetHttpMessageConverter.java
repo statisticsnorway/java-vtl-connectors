@@ -24,12 +24,11 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import no.ssb.vtl.model.Component;
+import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
@@ -54,6 +53,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static java.lang.String.format;
+import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
+import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON;
+import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_X_SSB_DATASET_STRUCTURE_JSON;
+
 /**
  * A converter that support the following conversions
  * <p>
@@ -76,8 +80,10 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     private final DataHttpConverter dataConverter;
     private final DataStructureHttpConverter structureConverter;
 
-    private static final TypeReference<List<Object>> LIST_TYPE_REFERENCE = new TypeReference<List<Object>>() {
-    };
+    // @formatter:off
+    private static final TypeToken<Stream<DataPoint>> STREAM_TYPE_TOKEN = new TypeToken<Stream<DataPoint>>() {};
+    private static final TypeReference<List<Object>> LIST_TYPE_REFERENCE = new TypeReference<List<Object>>() {};
+    // @formatter:on
 
     @VisibleForTesting
     static final List<MediaType> SUPPORTED_TYPES;
@@ -85,6 +91,11 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     static {
         SUPPORTED_TYPES = new ArrayList<>();
         SUPPORTED_TYPES.add(APPLICATION_DATASET_JSON);
+
+        SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_STRUCTURE_JSON);
+        SUPPORTED_TYPES.add(APPLICATION_X_SSB_DATASET_STRUCTURE_JSON);
+
+        SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_DATA_JSON_V2);
     }
 
     public DatasetHttpMessageConverter(ObjectMapper objectMapper) {
@@ -97,32 +108,40 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         this(new ObjectMapper());
     }
 
-    @Override
-    public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
-        JavaType javaType = getJavaType(type, contextClass);
-        return readInternal(javaType.getRawClass(), inputMessage);
-    }
-
+    /*
+     * @see
+     */
     @Override
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
-        return canRead(getJavaType(type, contextClass).getRawClass(), mediaType);
+        return canRead(TypeToken.of(type), mediaType);
     }
 
     @Override
     public boolean canRead(Class<?> clazz, MediaType mediaType) {
-        return canRead(mediaType) && isClassSupported(clazz);
+        return canRead(TypeToken.of(clazz), mediaType);
     }
 
-    private boolean isClassSupported(Class<?> clazz) {
-        return clazz.isAssignableFrom(DataStructure.class) ||
-                clazz.isAssignableFrom(Stream.class) ||
-                clazz.isAssignableFrom(Dataset.class);
+    private boolean canRead(TypeToken<?> token, MediaType mediaType) {
+        return canRead(mediaType) && (token.isSupertypeOf(STREAM_TYPE_TOKEN) ||
+                token.isSupertypeOf(DataStructure.class) ||
+                token.isSupertypeOf(Dataset.class));
+    }
+
+    @Override
+    public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
+        return canWrite(clazz, mediaType);
     }
 
     @Override
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
-        return canWrite(mediaType) && isClassSupported(clazz);
+        TypeToken<?> token = TypeToken.of(clazz);
+        return canWrite(mediaType) && (token.isSubtypeOf(STREAM_TYPE_TOKEN) ||
+                token.isSubtypeOf(DataStructure.class) ||
+                token.isSubtypeOf(Dataset.class));
     }
+
+
+
 
     @Override
     public List<MediaType> getSupportedMediaTypes() {
@@ -130,9 +149,19 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     }
 
     @Override
-    protected Dataset readInternal(Class<?> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
-        ObjectMapper mapper = getObjectMapper();
+    public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage)
+            throws IOException, HttpMessageNotReadableException {
+        return readInternal(TypeToken.of(type), inputMessage);
+    }
 
+    @Override
+    protected Object readInternal(Class<?> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
+        return readInternal(TypeToken.of(clazz), inputMessage);
+    }
+
+    protected Object readInternal(TypeToken<?> token, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
+
+        ObjectMapper mapper = getObjectMapper();
         JsonParser parser = mapper.getFactory().createParser(inputMessage.getBody());
 
         // Advance to { "": [ <--
@@ -141,8 +170,10 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
         // Expect { "structure": [
         checkCurrentName(parser, "structure");
-
         DataStructure structure = structureConverter.readWithParser(parser);
+
+        if (token.isSupertypeOf(DataStructure.class))
+            return structure;
 
         // Advance to { "structure": {}, "" : [ <--
         checkToken(parser, parser.nextValue(), JsonToken.START_ARRAY);
@@ -150,6 +181,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         // Expect { "data": [
         checkCurrentName(parser, "data");
 
+        // Advance to { "structure": {}, "" : [[ <--
         parser.nextValue();
 
         MappingIterator<List<Object>> data = mapper.readerFor(LIST_TYPE_REFERENCE)
@@ -161,12 +193,17 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
                 ), false
         );
 
-        List<DataPoint> dataPoints = rawStream.map(pointWrappers -> {
+        Stream<DataPoint> convertedStream = rawStream.map(pointWrappers -> {
             return pointWrappers.stream()
                     .map(VTLObject::of)
                     .collect(Collectors.toList()
                     );
-        }).map(DataPoint::create).collect(Collectors.toList());
+        }).map(DataPoint::create);
+
+        if (token.isSupertypeOf(STREAM_TYPE_TOKEN))
+            return convertedStream;
+
+        List<DataPoint> dataPoints = convertedStream.collect(Collectors.toList());
 
         return new Dataset() {
             @Override
@@ -192,53 +229,58 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     }
 
     @Override
+    protected void writeInternal(Object o, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
+        writeInternal(o, o.getClass(), outputMessage);
+    }
+
+    @Override
     protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
-
-        if (object instanceof Dataset) {
-            Dataset dataset = (Dataset) object;
-
-            ObjectMapper mapper = getObjectMapper();
-
-            try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
+        if (!(object instanceof Dataset))
+            throw new IllegalArgumentException(format("Got wrong object type %s", object.getClass()));
 
 
-                generator.writeStartObject();
+        Dataset dataset = (Dataset) object;
 
-//            "name": "MCSTRING",
-//            "role": "MEASURE",
-//            "type": "STRING"
+        ObjectMapper mapper = getObjectMapper();
 
-                generator.writeArrayFieldStart("structure");
-                for (Map.Entry<String, Component> variable : dataset.getDataStructure().entrySet()) {
-                    Component component = variable.getValue();
+        MediaType contentType = outputMessage.getHeaders().getContentType();
+        if (structureConverter.canWrite(DataStructure.class, contentType)) {
+            structureConverter.writeInternal(dataset.getDataStructure(), outputMessage);
+            return;
+        }
 
-                    generator.writeStartObject();
-                    generator.writeStringField("name", variable.getKey());
-                    generator.writeStringField("role", component.getRole().name());
-                    generator.writeStringField("type", RoleMapping.fromType(component.getType()).name());
-                    generator.writeEndObject();
-
-                }
-                generator.writeEndArray();
-
-                generator.writeArrayFieldStart("data");
-
-                try (Stream<DataPoint> data = dataset.getData()) {
-                    Iterator<DataPoint> it = data.iterator();
-                    while (it.hasNext()) {
-                        DataPoint next = it.next();
-                        generator.writeStartArray(next.size());
-                        for (VTLObject obj : next) {
-                            mapper.writeValue(generator, obj.get());
-                        }
-                        generator.writeEndArray();
-                    }
-                }
-
-                generator.writeEndArray();
-                generator.writeEndObject();
-
+        if (dataConverter.canWrite(STREAM_TYPE_TOKEN.getType(), null, contentType)) {
+            try (Stream<DataPoint> stream = dataset.getData()) {
+                dataConverter.write(stream, contentType, outputMessage);
+                return;
             }
+        }
+
+
+        try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
+            generator.writeStartObject();
+
+            generator.writeArrayFieldStart("structure");
+            structureConverter.writeWithParser(dataset.getDataStructure(), generator);
+            generator.writeEndArray();
+
+            generator.writeArrayFieldStart("data");
+
+            try (Stream<DataPoint> data = dataset.getData()) {
+                Iterator<DataPoint> it = data.iterator();
+                while (it.hasNext()) {
+                    DataPoint next = it.next();
+                    generator.writeStartArray(next.size());
+                    for (VTLObject obj : next) {
+                        mapper.writeValue(generator, obj.get());
+                    }
+                    generator.writeEndArray();
+                }
+            }
+
+            generator.writeEndArray();
+            generator.writeEndObject();
+
 
         }
     }
@@ -251,7 +293,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     private static void checkArgument(JsonParser parser, boolean check, String message, Object... arg) throws JsonMappingException {
         if (!check) {
-            throw JsonMappingException.from(parser, String.format(message, arg));
+            throw JsonMappingException.from(parser, format(message, arg));
         }
     }
 
@@ -264,7 +306,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     }
 
     private static void checkCurrentName(JsonParser parser, String prop) throws IOException {
-        checkArgument(parser, prop.equals(parser.getCurrentName()), String.format("Unrecognized field \"%s\", expected \"%s\"",
+        checkArgument(parser, prop.equals(parser.getCurrentName()), format("Unrecognized field \"%s\", expected \"%s\"",
                 parser.getCurrentName(), prop
         ));
     }

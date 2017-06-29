@@ -86,20 +86,20 @@ public class DataStructureHttpConverterTest {
     public void testCanRead() throws Exception {
         softly.assertThat(
 
-                converter.canRead(DataStructure.class, DataStructureHttpConverter.MEDIA_TYPE)
+                converter.canRead(DataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON)
 
         ).as(
                 "supports reading class %s with media type %s",
-                DataStructure.class, DataStructureHttpConverter.MEDIA_TYPE
+                DataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON
         ).isTrue();
 
         softly.assertThat(
 
-                converter.canRead(ExtendedDataStructure.class, DataStructureHttpConverter.MEDIA_TYPE)
+                converter.canRead(ExtendedDataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON)
 
         ).as(
                 "supports reading subclass %s with media type %s",
-                ExtendedDataStructure.class, DataStructureHttpConverter.MEDIA_TYPE
+                ExtendedDataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON
         ).isFalse();
     }
 
@@ -107,20 +107,20 @@ public class DataStructureHttpConverterTest {
     public void canWrite() throws Exception {
         softly.assertThat(
 
-                converter.canWrite(DataStructure.class, DataStructureHttpConverter.MEDIA_TYPE)
+                converter.canWrite(DataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON)
 
         ).as(
                 "supports writing class %s with media type %s",
-                DataStructure.class, DataStructureHttpConverter.MEDIA_TYPE
+                DataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON
         ).isTrue();
 
         softly.assertThat(
 
-                converter.canWrite(ExtendedDataStructure.class, DataStructureHttpConverter.MEDIA_TYPE)
+                converter.canWrite(ExtendedDataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON)
 
         ).as(
                 "supports writing subclass %s with media type %s",
-                ExtendedDataStructure.class, DataStructureHttpConverter.MEDIA_TYPE
+                ExtendedDataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON
         ).isTrue();
     }
 
