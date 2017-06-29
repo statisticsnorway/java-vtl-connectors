@@ -40,6 +40,7 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
     private final BlockingQueue<DataPoint> queue;
     private final Future<?> future;
     private final AtomicReference<Exception> exception;
+    private boolean hasMore = true;
 
     public BlockingQueueSpliterator(BlockingQueue<DataPoint> queue, Future<?> future, AtomicReference<Exception> exception) {
         super(Long.MAX_VALUE, Spliterator.IMMUTABLE);
@@ -50,11 +51,16 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
 
     @Override
     public boolean tryAdvance(Consumer<? super DataPoint> action) {
+        if (!hasMore)
+            return false;
+
         try {
 
             DataPoint p = queue.take();
-            if (p == EOS)
+            if (p == EOS) {
+                hasMore = false;
                 return false;
+            }
 
             action.accept(p);
 
@@ -74,6 +80,8 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
     @Override
     public void forEachRemaining(Consumer<? super DataPoint> action) {
         try {
+
+            hasMore = false;
 
             DataPoint p;
             while ((p = queue.take()) != EOS)
