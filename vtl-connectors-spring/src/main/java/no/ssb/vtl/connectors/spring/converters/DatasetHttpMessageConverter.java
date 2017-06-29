@@ -56,7 +56,6 @@ import java.util.stream.StreamSupport;
 import static java.lang.String.format;
 import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
 import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON;
-import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_X_SSB_DATASET_STRUCTURE_JSON;
 
 /**
  * A converter that support the following conversions
@@ -91,10 +90,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     static {
         SUPPORTED_TYPES = new ArrayList<>();
         SUPPORTED_TYPES.add(APPLICATION_DATASET_JSON);
-
         SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_STRUCTURE_JSON);
-        SUPPORTED_TYPES.add(APPLICATION_X_SSB_DATASET_STRUCTURE_JSON);
-
         SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_DATA_JSON_V2);
     }
 
@@ -201,7 +197,14 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         }).map(DataPoint::create);
 
         if (token.isSupertypeOf(STREAM_TYPE_TOKEN))
-            return convertedStream;
+            return convertedStream.onClose(() -> {
+                        try {
+                            parser.close();
+                        } catch (IOException e) {
+                            throw new RuntimeException(format("could not close parser %s", parser), e);
+                        }
+                    }
+            );
 
         List<DataPoint> dataPoints = convertedStream.collect(Collectors.toList());
 
@@ -235,20 +238,21 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     @Override
     protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
+
         if (!(object instanceof Dataset))
             throw new IllegalArgumentException(format("Got wrong object type %s", object.getClass()));
 
-
         Dataset dataset = (Dataset) object;
-
         ObjectMapper mapper = getObjectMapper();
 
+        // Delegate to DataStructureHttpConverter if requested type matches.
         MediaType contentType = outputMessage.getHeaders().getContentType();
         if (structureConverter.canWrite(DataStructure.class, contentType)) {
             structureConverter.writeInternal(dataset.getDataStructure(), outputMessage);
             return;
         }
 
+        // Delegate to DataHttpConverter if requested type matches.
         if (dataConverter.canWrite(STREAM_TYPE_TOKEN.getType(), null, contentType)) {
             try (Stream<DataPoint> stream = dataset.getData()) {
                 dataConverter.write(stream, contentType, outputMessage);

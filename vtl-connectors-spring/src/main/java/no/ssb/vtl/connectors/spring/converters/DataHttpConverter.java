@@ -46,21 +46,20 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 /**
  * A converter that can read and write data point streams.
  * <p>
- * It supports reading from:
+ * It supports reading Stream<DataPoint> from:
  * <ul>
  * <li>application/ssb.dataset.data+json ; [version=2]"</li>
- * <li>application/x-ssb.dataset.data+json ; [version=2]</li>
  * </ul>
  * <p>
  * And writes:
  * <ul>
  * <li>application/ssb.dataset.data+json;version=2</li>
- * <li>application/x-ssb.dataset.data+json;version=2</li>
  * </ul>
  */
 public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Stream<DataPoint>> {
@@ -187,11 +186,16 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
 
     @Override
     protected Stream<DataPoint> readInternal(Class<? extends Stream<DataPoint>> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
-        // TODO: wrap exceptions in HttpMessageNotReadableException
         JsonParser parser = mapper.getFactory().createParser(inputMessage.getBody());
         parser.nextValue();
         parser.nextValue();
-        return readWithParser(parser);
+        return readWithParser(parser).onClose(() -> {
+            try {
+                parser.close();
+            } catch (IOException e) {
+                throw new RuntimeException(format("failed to close %s", parser),e);
+            }
+        });
     }
 
 
@@ -202,11 +206,14 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
 
         ObjectWriter writer = mapper.writerFor(LIST_TYPE_REFERENCE);
         SequenceWriter sequenceWriter = writer.writeValues(generator);
-        for (DataPoint point : (Iterable<DataPoint>) stream::iterator) {
-            List<VTLObjectWrapper> wrapped = point.stream()
-                    .map(this::fromVTLObject)
-                    .collect(toList());
-            sequenceWriter.write(wrapped);
+
+        try (Stream<DataPoint> closedStream = stream) {
+            for (DataPoint point : (Iterable<DataPoint>) closedStream::iterator) {
+                List<VTLObjectWrapper> wrapped = point.stream()
+                        .map(this::fromVTLObject)
+                        .collect(toList());
+                sequenceWriter.write(wrapped);
+            }
         }
         generator.writeEndArray();
     }

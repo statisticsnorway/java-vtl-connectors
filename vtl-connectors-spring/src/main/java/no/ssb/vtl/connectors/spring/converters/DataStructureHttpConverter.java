@@ -59,10 +59,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class DataStructureHttpConverter extends AbstractHttpMessageConverter<DataStructure> {
 
     public static final String APPLICATION_SSB_DATASET_STRUCTURE_JSON_VALUE = "application/ssb.dataset.structure+json";
-    public static final String APPLICATION_X_SSB_DATASET_STRUCTURE_JSON_VALUE = "application/x-ssb.dataset.structure+json";
-
     public static final MediaType APPLICATION_SSB_DATASET_STRUCTURE_JSON = MediaType.parseMediaType(APPLICATION_SSB_DATASET_STRUCTURE_JSON_VALUE);
-    public static final MediaType APPLICATION_X_SSB_DATASET_STRUCTURE_JSON = MediaType.parseMediaType(APPLICATION_SSB_DATASET_STRUCTURE_JSON_VALUE);
 
     private final ObjectMapper mapper;
 
