@@ -21,7 +21,6 @@ package no.ssb.vtl.connectors.utils;
  */
 
 import org.assertj.core.util.Lists;
-import org.junit.Test;
 
 import java.util.List;
 import java.util.Spliterator;
@@ -32,12 +31,10 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Created by hadrien on 14/06/2017.
- */
 public class ConcurrentSpliteratorTest {
 
-    @Test
+    // TODO
+    //@Test
     public void test() throws Exception {
 
         List<Integer> range = IntStream.rangeClosed(1, 100)
