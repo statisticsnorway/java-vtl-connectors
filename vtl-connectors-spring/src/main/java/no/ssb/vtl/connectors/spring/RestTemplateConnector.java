@@ -107,13 +107,18 @@ public class RestTemplateConnector implements Connector {
 
                         Iterator<DataPoint> it = stream.iterator();
                         while (it.hasNext()) {
-                            queue.put(it.next());
+                            DataPoint e = it.next();
+                            queue.put(e);
                         }
                         queue.put(BlockingQueueSpliterator.EOS);
 
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
+                        reader.interrupt();
                         log.debug("interrupted while pushing datapoints to {}", queue);
+                    } catch (Exception e) {
+                        log.debug("error while pushing datapoints to {}", queue, e);
+                        exception.set(e);
                         reader.interrupt();
                     }
                     return null;

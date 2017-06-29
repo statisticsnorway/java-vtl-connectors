@@ -69,8 +69,12 @@ public class TimeoutConnector extends ForwardingConnector {
      */
     private static Runnable createCancelTask(ScheduledFuture<?> timeoutTask, Stream<DataPoint> stream, Dataset dataset) {
         return () -> {
-            logger.debug("cancelling timeout {} of dataset {}", stream, dataset);
-            timeoutTask.cancel(true);
+            if (!timeoutTask.isCancelled()) {
+                logger.debug("stream {} closed, cancelling the scheduled task {}", stream, timeoutTask);
+                timeoutTask.cancel(true);
+            } else {
+                logger.debug("the task {} was already cancelled");
+            }
         };
     }
 

@@ -106,7 +106,7 @@ public class DataHttpConverterTest {
         assertThat(collect).isNotNull();
 
 
-        assertThat(collect)
+        softly.assertThat(collect)
                 .flatExtracting(input -> input)
                 .filteredOn(vtlObject -> !VTLObject.NULL.equals(vtlObject))
                 .extracting(input -> input.get().getClass())
@@ -118,7 +118,7 @@ public class DataHttpConverterTest {
                         (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class  // null
                 );
 
-        assertThat(collect)
+        softly.assertThat(collect)
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsExactly(
