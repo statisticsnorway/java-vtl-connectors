@@ -56,6 +56,10 @@
     </licenses>
 
     <distributionManagement>
+        <repository>
+            <id>ossrh-release</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
         <snapshotRepository>
             <id>ossrh</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
@@ -96,13 +100,13 @@
             <version>1.10.19</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
             <scope>test</scope>
         </dependency>
-
 
     </dependencies>
 
