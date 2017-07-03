@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.ssb.vtl.connectors</groupId>
+        <artifactId>java-vtl-connectors-parent</artifactId>
+        <version>0.1.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>java-vtl-connectors-ssb</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+
+    <name>Java VTL SSB connectors</name>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>no.ssb.vtl.connectors</groupId>
+            <artifactId>java-vtl-connectors-api</artifactId>
+            <version>0.1.1-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>no.ssb.jsonstat</groupId>
+            <artifactId>json-stat-java</artifactId>
+            <version>0.2.2</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>guava</artifactId>
+                    <groupId>com.google.guava</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>4.3.4.RELEASE</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!--
+            bridge jck to slf4j.
+            Needed because org.springframework.http.converter.AbstractHttpMessageConverter uses
+            org/apache/commons/logging/LogFactory.
+        -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>RELEASE</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>4.3.4.RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+</project>

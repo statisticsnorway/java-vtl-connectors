@@ -13,6 +13,8 @@
     <artifactId>java-vtl-connectors-api</artifactId>
     <version>0.1.1-SNAPSHOT</version>
 
+    <name>Java VTL connector API</name>
+
     <dependencies>
         <dependency>
             <groupId>no.ssb.vtl</groupId>
