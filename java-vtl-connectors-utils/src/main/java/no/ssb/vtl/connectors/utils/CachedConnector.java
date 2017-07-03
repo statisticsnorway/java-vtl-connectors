@@ -24,7 +24,7 @@ package no.ssb.vtl.connectors.utils;
 
 import com.google.common.base.Supplier;
 import com.google.common.cache.Cache;
-import no.ssb.vtl.connector.Connector;
+import no.ssb.vtl.connectors.Connector;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.Dataset;
 import no.ssb.vtl.model.Order;

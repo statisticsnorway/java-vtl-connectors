@@ -21,8 +21,8 @@ package no.ssb.vtl.connectors.utils;
  */
 
 import com.google.common.collect.ForwardingObject;
-import no.ssb.vtl.connector.Connector;
-import no.ssb.vtl.connector.ConnectorException;
+import no.ssb.vtl.connectors.Connector;
+import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.Dataset;
 
 /**

@@ -20,8 +20,8 @@ package no.ssb.vtl.connectors.utils;
  * =========================LICENSE_END==================================
  */
 
-import no.ssb.vtl.connector.Connector;
-import no.ssb.vtl.connector.ConnectorException;
+import no.ssb.vtl.connectors.Connector;
+import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.Dataset;
 import org.slf4j.Logger;

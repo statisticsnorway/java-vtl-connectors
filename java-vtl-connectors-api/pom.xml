@@ -10,7 +10,6 @@
         <version>0.1.1-SNAPSHOT</version>
     </parent>
 
-    <groupId>no.ssb.vtl.connectors</groupId>
     <artifactId>java-vtl-connectors-api</artifactId>
     <version>0.1.1-SNAPSHOT</version>
 

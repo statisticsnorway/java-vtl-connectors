@@ -21,8 +21,8 @@ package no.ssb.vtl.connectors.spring;
  */
 
 import com.google.common.collect.Queues;
-import no.ssb.vtl.connector.Connector;
-import no.ssb.vtl.connector.ConnectorException;
+import no.ssb.vtl.connectors.Connector;
+import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
