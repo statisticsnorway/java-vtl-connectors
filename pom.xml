@@ -15,14 +15,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>no.ssb.vtl</groupId>
+    <groupId>no.ssb.vtl.connectors</groupId>
     <artifactId>java-vtl-connectors-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>vtl-connectors-utils</module>
-        <module>vtl-connectors-spring</module>
+        <module>java-vtl-connectors-utils</module>
+        <module>java-vtl-connectors-spring</module>
+        <module>java-vtl-connectors-api</module>
     </modules>
 
     <name>Java VTL connectors</name>
@@ -73,12 +74,6 @@
     </scm>
 
     <dependencies>
-
-        <dependency>
-            <groupId>no.ssb.vtl</groupId>
-            <artifactId>java-vtl-connector</artifactId>
-            <version>0.1.0</version>
-        </dependency>
 
         <dependency>
             <groupId>org.assertj</groupId>
