@@ -10,18 +10,12 @@
         <version>0.1.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>java-vtl-connectors-ssb</artifactId>
+    <artifactId>ssb-connector</artifactId>
     <version>0.1.1-SNAPSHOT</version>
 
     <name>Java VTL SSB connectors</name>
 
     <dependencies>
-
-        <dependency>
-            <groupId>no.ssb.vtl.connectors</groupId>
-            <artifactId>java-vtl-connectors-api</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
-        </dependency>
 
         <dependency>
             <groupId>no.ssb.jsonstat</groupId>

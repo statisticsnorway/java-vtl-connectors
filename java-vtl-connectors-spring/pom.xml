@@ -11,18 +11,12 @@
         <version>0.1.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>vtl-connectors-spring</artifactId>
+    <artifactId>spring-connector</artifactId>
     <version>0.1.1-SNAPSHOT</version>
 
     <name>Java VTL Spring connector</name>
 
     <dependencies>
-
-        <dependency>
-            <groupId>no.ssb.vtl.connectors</groupId>
-            <artifactId>java-vtl-connectors-api</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
-        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>

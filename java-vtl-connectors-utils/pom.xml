@@ -10,7 +10,7 @@
         <version>0.1.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>vtl-connectors-utils</artifactId>
+    <artifactId>utils</artifactId>
     <version>0.1.1-SNAPSHOT</version>
 
     <name>Java VTL Utility connectors</name>
@@ -26,12 +26,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>22.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>no.ssb.vtl.connectors</groupId>
-            <artifactId>java-vtl-connectors-api</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
         </dependency>
 
     </dependencies>

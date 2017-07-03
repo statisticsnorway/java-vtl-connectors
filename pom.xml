@@ -23,7 +23,6 @@
     <modules>
         <module>java-vtl-connectors-utils</module>
         <module>java-vtl-connectors-spring</module>
-        <module>java-vtl-connectors-api</module>
         <module>java-vtl-connectors-ssb</module>
     </modules>
 
@@ -77,6 +76,12 @@
     <dependencies>
 
         <dependency>
+            <groupId>no.ssb.vtl</groupId>
+            <artifactId>java-vtl-model</artifactId>
+            <version>0.1.1-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>3.6.1</version>
@@ -116,8 +121,10 @@
                 <configuration>
                     <licenseName>apache_v2</licenseName>
                     <failOnMissingHeader>true</failOnMissingHeader>
-                    <processStartTag>========================LICENSE_START=================================</processStartTag>
-                    <processEndTag>=========================LICENSE_END==================================</processEndTag>
+                    <processStartTag>========================LICENSE_START=================================
+                    </processStartTag>
+                    <processEndTag>=========================LICENSE_END==================================
+                    </processEndTag>
                     <excludes>
                         <exclude>**/*.json</exclude>
                     </excludes>
