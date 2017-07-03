@@ -39,6 +39,7 @@ import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
+import org.kohsuke.MetaInfServices;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -80,6 +81,7 @@ import static java.util.Arrays.asList;
 /**
  * A VTL connector that gets data from KLASS part of api.ssb.no.
  */
+@MetaInfServices
 public class SsbKlassApiConnector implements Connector {
 
     private static final String SERVICE_URL = "http://data.ssb.no/api/klass/v1";
@@ -146,6 +148,10 @@ public class SsbKlassApiConnector implements Connector {
                 jacksonConverter
         ));
 
+    }
+
+    public SsbKlassApiConnector() {
+        this(new ObjectMapper(), PeriodType.YEAR);
     }
 
     /**

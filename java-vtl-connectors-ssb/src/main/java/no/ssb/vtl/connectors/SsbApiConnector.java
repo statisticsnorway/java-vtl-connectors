@@ -40,6 +40,7 @@ import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
+import org.kohsuke.MetaInfServices;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -64,6 +65,7 @@ import static java.util.Arrays.asList;
 /**
  * A VTL connector that gets data from api.ssb.no.
  */
+@MetaInfServices
 public class SsbApiConnector implements Connector {
 
     private final ObjectMapper mapper;
@@ -103,6 +105,10 @@ public class SsbApiConnector implements Connector {
         ));
 
 
+    }
+
+    public SsbApiConnector() {
+        this(new ObjectMapper());
     }
 
     /**
