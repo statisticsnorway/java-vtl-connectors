@@ -20,6 +20,7 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -77,6 +78,8 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
 
     private final ObjectMapper mapper;
     private final boolean requireVersion;
+    private JsonFactory factory;
+    private ObjectWriter rowWriter;
 
     public DataHttpConverter(ObjectMapper mapper) {
         this(mapper, true);
@@ -87,6 +90,8 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
                 APPLICATION_SSB_DATASET_DATA_JSON_V2
         );
         this.mapper = checkNotNull(mapper);
+        this.rowWriter = this.mapper.writerFor(LIST_TYPE_REFERENCE);
+        this.factory = this.mapper.getFactory();
         this.requireVersion = requireVersion;
 
         // TODO: Initialize readers.
@@ -181,41 +186,41 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
                     .map(this::toVTLObject)
                     .collect(toList()
                     );
-        }).map(DataPoint::create);
+        }).map(DataPoint::create).onClose(() -> {
+            try {
+                parser.close();
+            } catch (IOException e) {
+                throw new RuntimeException(format("failed to close %s", parser), e);
+            }
+        });
     }
 
     @Override
     protected Stream<DataPoint> readInternal(Class<? extends Stream<DataPoint>> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
-        JsonParser parser = mapper.getFactory().createParser(inputMessage.getBody());
+        JsonParser parser = factory.createParser(inputMessage.getBody());
         parser.nextValue();
         parser.nextValue();
-        return readWithParser(parser).onClose(() -> {
-            try {
-                parser.close();
-            } catch (IOException e) {
-                throw new RuntimeException(format("failed to close %s", parser),e);
-            }
-        });
+        return readWithParser(parser);
     }
 
 
     @Override
     protected void writeInternal(Stream<DataPoint> stream, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
-        JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody());
-        generator.writeStartArray();
+        try (
+                JsonGenerator generator = factory.createGenerator(outputMessage.getBody());
+                SequenceWriter sequenceWriter = rowWriter.writeValues(generator);
+                Stream<DataPoint> closedStream = stream
+        ) {
 
-        ObjectWriter writer = mapper.writerFor(LIST_TYPE_REFERENCE);
-        SequenceWriter sequenceWriter = writer.writeValues(generator);
-
-        try (Stream<DataPoint> closedStream = stream) {
+            generator.writeStartArray();
             for (DataPoint point : (Iterable<DataPoint>) closedStream::iterator) {
                 List<VTLObjectWrapper> wrapped = point.stream()
                         .map(this::fromVTLObject)
                         .collect(toList());
                 sequenceWriter.write(wrapped);
             }
+            generator.writeEndArray();
         }
-        generator.writeEndArray();
     }
 
     private VTLObjectWrapper fromVTLObject(VTLObject object) {
