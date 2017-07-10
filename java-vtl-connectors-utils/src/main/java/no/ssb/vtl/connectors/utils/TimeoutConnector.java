@@ -43,7 +43,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * A {@link Connector} wrapper that makes sure all streams returned by the datasets
  * will eventually timeout.
  */
-public class TimeoutConnector extends ForwardingConnector {
+class TimeoutConnector extends ForwardingConnector {
 
     public static final String DELEGATE_WAS_NULL_ERROR = "delegate was null";
     public static final String UNIT_WAS_NULL_ERROR = "unit was null";
