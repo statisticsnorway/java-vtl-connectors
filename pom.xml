@@ -15,14 +15,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>no.ssb.vtl</groupId>
+    <groupId>no.ssb.vtl.connectors</groupId>
     <artifactId>java-vtl-connectors-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>vtl-connectors-utils</module>
-        <module>vtl-connectors-spring</module>
+        <module>java-vtl-connectors-utils</module>
+        <module>java-vtl-connectors-spring</module>
+        <module>java-vtl-connectors-ssb</module>
     </modules>
 
     <name>Java VTL connectors</name>
@@ -76,8 +77,8 @@
 
         <dependency>
             <groupId>no.ssb.vtl</groupId>
-            <artifactId>java-vtl-connector</artifactId>
-            <version>0.1.0</version>
+            <artifactId>java-vtl-model</artifactId>
+            <version>0.1.2</version>
         </dependency>
 
         <dependency>
@@ -120,8 +121,10 @@
                 <configuration>
                     <licenseName>apache_v2</licenseName>
                     <failOnMissingHeader>true</failOnMissingHeader>
-                    <processStartTag>========================LICENSE_START=================================</processStartTag>
-                    <processEndTag>=========================LICENSE_END==================================</processEndTag>
+                    <processStartTag>========================LICENSE_START=================================
+                    </processStartTag>
+                    <processEndTag>=========================LICENSE_END==================================
+                    </processEndTag>
                     <excludes>
                         <exclude>**/*.json</exclude>
                     </excludes>
