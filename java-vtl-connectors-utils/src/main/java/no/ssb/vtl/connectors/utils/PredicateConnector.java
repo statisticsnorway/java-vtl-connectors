@@ -30,7 +30,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * A wrapper connector that checks identifiers against {@link Predicate}
  */
-abstract class PredicateConnector extends ForwardingConnector {
+public abstract class PredicateConnector extends ForwardingConnector {
 
     private final Predicate<String> predicate;
     private final Boolean throwException;
