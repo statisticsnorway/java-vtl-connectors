@@ -20,12 +20,15 @@ package no.ssb.vtl.connectors.spring;
  * =========================LICENSE_END==================================
  */
 
+import com.codepoetics.protonpack.StreamUtils;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Queues;
 import no.ssb.vtl.connectors.Connector;
 import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
+import no.ssb.vtl.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
@@ -35,11 +38,14 @@ import org.springframework.web.client.RequestCallback;
 import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -48,6 +54,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -211,6 +218,25 @@ public class RestTemplateConnector implements Connector {
         }
     }
 
+    @VisibleForTesting
+    static UriComponentsBuilder createOrderUri(UriComponentsBuilder uri, Order order, DataStructure structure) {
+
+        // Add the sort parameter.
+        List<String> sortParams = StreamUtils.aggregate(order.entrySet().stream(), (e1, e2) -> e1.getValue().equals(e2.getValue()))
+                .map(entries -> {
+                    Order.Direction direction = entries.get(0).getValue();
+                    return entries.stream()
+                            .map(Map.Entry::getKey)
+                            .map(structure::getName)
+                            .collect(Collectors.joining(
+                                    ",", "", ",".concat(direction.toString())
+                            ));
+                })
+                .collect(Collectors.toList());
+
+        return uri.cloneBuilder().replaceQueryParam("sort", (Object[]) sortParams.toArray(new Object[]{}));
+    }
+
     private class RestTemplateDataset implements Dataset {
 
         private final URI uri;
@@ -218,6 +244,22 @@ public class RestTemplateConnector implements Connector {
 
         private RestTemplateDataset(URI uri) {
             this.uri = uri;
+        }
+
+        @Override
+        public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
+            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUri(uri);
+            if (!orders.isEmpty())
+                uriBuilder = createOrderUri(uriBuilder, orders, getDataStructure());
+
+            return Optional.of(RestTemplateConnector.this.getData(uriBuilder.build().toUri()));
+        }
+
+        @Override
+        public Optional<Stream<DataPoint>> getData(Order order) {
+            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUri(uri);
+            UriComponentsBuilder uriWithOrder = createOrderUri(uriBuilder, order, getDataStructure());
+            return Optional.of(RestTemplateConnector.this.getData(uriWithOrder.build().toUri()));
         }
 
         @Override
