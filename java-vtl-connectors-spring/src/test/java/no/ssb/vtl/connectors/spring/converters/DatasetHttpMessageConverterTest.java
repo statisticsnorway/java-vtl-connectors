@@ -30,6 +30,7 @@ import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
 import org.assertj.core.api.JUnitSoftAssertions;
+import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,11 +41,17 @@ import org.springframework.mock.http.MockHttpOutputMessage;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import static com.google.common.io.Resources.getResource;
+import static no.ssb.vtl.model.Component.Role.ATTRIBUTE;
+import static no.ssb.vtl.model.Component.Role.IDENTIFIER;
+import static no.ssb.vtl.model.Component.Role.MEASURE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DatasetHttpMessageConverterTest {
@@ -102,6 +109,49 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Test
+    public void testStructureOrderIsConsistent() throws IOException {
+
+        DataStructure structure1 = DataStructure.builder()
+                .put("Id1", IDENTIFIER, String.class)
+                .put("Me2", MEASURE, String.class)
+                .put("Id2", IDENTIFIER, String.class)
+                .put("At2", ATTRIBUTE, String.class)
+                .put("Me1", MEASURE, String.class)
+                .put("At1", ATTRIBUTE, String.class)
+                .build();
+
+        DataStructure structure2 = DataStructure.builder()
+                .put("At2", ATTRIBUTE, String.class)
+                .put("Me2", MEASURE, String.class)
+                .put("At1", ATTRIBUTE, String.class)
+                .put("Me1", MEASURE, String.class)
+                .put("Id2", IDENTIFIER, String.class)
+                .put("Id1", IDENTIFIER, String.class)
+                .build();
+
+        Map<String, Object> data = ImmutableMap.<String, Object>builder()
+                .put("Id1","Id1")
+                .put("Id2","Id2")
+                .put("Me1","Me1")
+                .put("Me2","Me2")
+                .put("At1","At1")
+                .put("At2","At2")
+                .build();
+
+        TestDataset dataset1 = new TestDataset(structure1, Lists.newArrayList(data));
+        TestDataset dataset2 = new TestDataset(structure2, Lists.newArrayList(data));
+
+        MockHttpOutputMessage outputMessage1 = new MockHttpOutputMessage();
+        MockHttpOutputMessage outputMessage2 = new MockHttpOutputMessage();
+
+        converter.write(dataset1, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage1);
+        converter.write(dataset2, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage2);
+
+        assertThat(outputMessage1.getBodyAsString()).isEqualTo(outputMessage2.getBodyAsString());
+
+    }
+
+    @Test
     public void testWriteDatasetVersion2() throws Exception {
 
         HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");
@@ -115,6 +165,37 @@ public class DatasetHttpMessageConverterTest {
         JsonNode written = mapper.readTree(outputMessage.getBodyAsBytes());
 
         assertThat(written).isEqualTo(original);
+    }
+
+    private static class TestDataset implements Dataset {
+
+        private final DataStructure structure;
+        private final List<Map<String, Object>> data;
+
+        public TestDataset(DataStructure structure, List<Map<String, Object>> data) {
+            this.structure = structure;
+            this.data = data;
+        }
+
+        @Override
+        public Stream<DataPoint> getData() {
+            return data.stream().map(structure::fromStringMap);
+        }
+
+        @Override
+        public Optional<Map<String, Integer>> getDistinctValuesCount() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Long> getSize() {
+            return Optional.empty();
+        }
+
+        @Override
+        public DataStructure getDataStructure() {
+            return structure;
+        }
     }
 
     private static class ExtendedDataStructure extends DataStructure {
