@@ -32,13 +32,14 @@ import no.ssb.vtl.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RequestCallback;
 import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.lang.reflect.Type;
@@ -51,13 +52,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -81,12 +83,17 @@ public class RestTemplateConnector implements Connector {
     }
     //@formatter:on
 
-    private final ExecutorService executorService;
+    private final AsyncTaskExecutor executorService;
     private final WrappedRestTemplate template;
 
-    public RestTemplateConnector(RestTemplate template, ExecutorService executorService) {
+    public RestTemplateConnector(RestTemplate template, Executor executorService) {
+        this(template, new TaskExecutorAdapter(checkNotNull(executorService)));
+    }
+
+    public RestTemplateConnector(RestTemplate template, AsyncTaskExecutor executorService) {
         this.template = new WrappedRestTemplate(checkNotNull(template));
         this.executorService = checkNotNull(executorService);
+
     }
 
     private Stream<DataPoint> getData(URI uri) {
@@ -244,6 +251,13 @@ public class RestTemplateConnector implements Connector {
 
         private RestTemplateDataset(URI uri) {
             this.uri = uri;
+        }
+
+        @Override
+        public String toString() {
+            return toStringHelper(this)
+                    .add("uri", uri)
+                    .toString();
         }
 
         @Override
