@@ -25,9 +25,11 @@ import no.ssb.vtl.connectors.Connector;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
+import no.ssb.vtl.model.Order;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -41,6 +43,26 @@ public abstract class ForwardingDataset extends ForwardingObject implements Data
     @Override
     public Stream<DataPoint> getData() {
         return this.delegate().getData();
+    }
+
+    @Override
+    public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
+        return  this.delegate().getData(orders, filtering, components);
+    }
+
+    @Override
+    public Optional<Stream<DataPoint>> getData(Order order) {
+        return  this.delegate().getData(order);
+    }
+
+    @Override
+    public Optional<Stream<DataPoint>> getData(Filtering filtering) {
+        return  this.delegate().getData(filtering);
+    }
+
+    @Override
+    public Optional<Stream<DataPoint>> getData(Set<String> components) {
+        return  this.delegate().getData(components);
     }
 
     @Override
