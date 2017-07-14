@@ -81,6 +81,9 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     public static final MediaType APPLICATION_DATASET_JSON = MediaType.parseMediaType(APPLICATION_DATASET_JSON_VALUE);
 
+    public static final String STRUCTURE_FIELD_NAME = "structure";
+    public static final String DATA_FIELD_NAME = "data";
+
     private final DataHttpConverter dataConverter;
     private final DataStructureHttpConverter structureConverter;
 
@@ -250,14 +253,15 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         Dataset dataset = (Dataset) object;
 
         // Make sure that Component order is always the same.
-        DataStructure structure = sortDataStructure(dataset.getDataStructure());
+        DataStructure structure = dataset.getDataStructure();
+        DataStructure sortedStructure = sortDataStructure(structure);
 
         ObjectMapper mapper = getObjectMapper();
 
         // Delegate to DataStructureHttpConverter if requested type matches.
         MediaType contentType = outputMessage.getHeaders().getContentType();
         if (structureConverter.canWrite(DataStructure.class, contentType)) {
-            structureConverter.writeInternal(structure, outputMessage);
+            structureConverter.writeInternal(sortedStructure, outputMessage);
             return;
         }
 
@@ -272,19 +276,19 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
             generator.writeStartObject();
 
-            generator.writeArrayFieldStart("structure");
-            structureConverter.writeWithParser(structure, generator);
+            generator.writeArrayFieldStart(STRUCTURE_FIELD_NAME);
+            structureConverter.writeWithParser(sortedStructure, generator);
             generator.writeEndArray();
 
-            generator.writeArrayFieldStart("data");
+            generator.writeArrayFieldStart(DATA_FIELD_NAME);
 
             try (Stream<DataPoint> data = dataset.getData()) {
                 Iterator<DataPoint> it = data.iterator();
                 while (it.hasNext()) {
                     Map<Component, VTLObject> next = structure.asMap(it.next());
                     generator.writeStartArray(next.size());
-                    for (Component component : structure.values()) {
-                        mapper.writeValue(generator, next.get(component));
+                    for (Component component : sortedStructure.values()) {
+                        mapper.writeValue(generator, next.get(component).get());
                     }
                     generator.writeEndArray();
                 }
