@@ -36,6 +36,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -87,6 +88,13 @@ public class TimeoutConnector extends ForwardingConnector {
     public Dataset getDataset(String identifier) throws ConnectorException {
         Dataset dataset = super.getDataset(identifier);
         return new ForwardingDataset() {
+
+            @Override
+            public String toString() {
+                return toStringHelper(this)
+                        .addValue(super.toString())
+                        .toString();
+            }
 
             @Override
             protected Dataset delegate() {

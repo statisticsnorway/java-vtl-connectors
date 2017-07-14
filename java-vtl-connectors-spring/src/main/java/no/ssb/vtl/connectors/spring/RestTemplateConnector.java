@@ -40,7 +40,6 @@ import org.springframework.web.client.RequestCallback;
 import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.lang.reflect.Type;
@@ -60,6 +59,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -251,6 +251,13 @@ public class RestTemplateConnector implements Connector {
 
         private RestTemplateDataset(URI uri) {
             this.uri = uri;
+        }
+
+        @Override
+        public String toString() {
+            return toStringHelper(this)
+                    .add("uri", uri)
+                    .toString();
         }
 
         @Override
