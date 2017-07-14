@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.reflect.TypeToken;
+import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
@@ -243,12 +244,14 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             throw new IllegalArgumentException(format("Got wrong object type %s", object.getClass()));
 
         Dataset dataset = (Dataset) object;
+        DataStructure structure = dataset.getDataStructure();
+
         ObjectMapper mapper = getObjectMapper();
 
         // Delegate to DataStructureHttpConverter if requested type matches.
         MediaType contentType = outputMessage.getHeaders().getContentType();
         if (structureConverter.canWrite(DataStructure.class, contentType)) {
-            structureConverter.writeInternal(dataset.getDataStructure(), outputMessage);
+            structureConverter.writeInternal(structure, outputMessage);
             return;
         }
 
@@ -260,12 +263,11 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             }
         }
 
-
         try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
             generator.writeStartObject();
 
             generator.writeArrayFieldStart("structure");
-            structureConverter.writeWithParser(dataset.getDataStructure(), generator);
+            structureConverter.writeWithParser(structure, generator);
             generator.writeEndArray();
 
             generator.writeArrayFieldStart("data");
@@ -273,9 +275,9 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             try (Stream<DataPoint> data = dataset.getData()) {
                 Iterator<DataPoint> it = data.iterator();
                 while (it.hasNext()) {
-                    DataPoint next = it.next();
+                    Map<Component, VTLObject> next = structure.asMap(it.next());
                     generator.writeStartArray(next.size());
-                    for (VTLObject obj : next) {
+                    for (VTLObject obj : next.values()) {
                         mapper.writeValue(generator, obj.get());
                     }
                     generator.writeEndArray();
