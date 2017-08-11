@@ -120,7 +120,6 @@ public class DataStructureHttpConverter extends AbstractHttpMessageConverter<Dat
     }
 
     void writeWithParser(DataStructure dataStructure, JsonGenerator generator) throws IOException {
-        // TODO: Reuse in dataset.
         for (Map.Entry<String, Component> variable : dataStructure.entrySet()) {
             Component component = variable.getValue();
 
