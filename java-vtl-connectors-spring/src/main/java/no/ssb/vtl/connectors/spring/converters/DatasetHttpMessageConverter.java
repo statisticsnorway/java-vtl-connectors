@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
@@ -48,6 +49,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Collectors;
@@ -57,6 +59,8 @@ import java.util.stream.StreamSupport;
 import static java.lang.String.format;
 import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
 import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON;
+import static no.ssb.vtl.model.Order.BY_NAME;
+import static no.ssb.vtl.model.Order.BY_ROLE;
 
 /**
  * A converter that support the following conversions
@@ -76,6 +80,9 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     public static final String APPLICATION_DATASET_JSON_VALUE = "application/ssb.dataset+json;version=2";
 
     public static final MediaType APPLICATION_DATASET_JSON = MediaType.parseMediaType(APPLICATION_DATASET_JSON_VALUE);
+
+    public static final String STRUCTURE_FIELD_NAME = "structure";
+    public static final String DATA_FIELD_NAME = "data";
 
     private final DataHttpConverter dataConverter;
     private final DataStructureHttpConverter structureConverter;
@@ -244,14 +251,17 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             throw new IllegalArgumentException(format("Got wrong object type %s", object.getClass()));
 
         Dataset dataset = (Dataset) object;
+
+        // Make sure that Component order is always the same.
         DataStructure structure = dataset.getDataStructure();
+        DataStructure sortedStructure = sortDataStructure(structure);
 
         ObjectMapper mapper = getObjectMapper();
 
         // Delegate to DataStructureHttpConverter if requested type matches.
         MediaType contentType = outputMessage.getHeaders().getContentType();
         if (structureConverter.canWrite(DataStructure.class, contentType)) {
-            structureConverter.writeInternal(structure, outputMessage);
+            structureConverter.writeInternal(sortedStructure, outputMessage);
             return;
         }
 
@@ -266,19 +276,19 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
             generator.writeStartObject();
 
-            generator.writeArrayFieldStart("structure");
-            structureConverter.writeWithParser(structure, generator);
+            generator.writeArrayFieldStart(STRUCTURE_FIELD_NAME);
+            structureConverter.writeWithParser(sortedStructure, generator);
             generator.writeEndArray();
 
-            generator.writeArrayFieldStart("data");
+            generator.writeArrayFieldStart(DATA_FIELD_NAME);
 
             try (Stream<DataPoint> data = dataset.getData()) {
                 Iterator<DataPoint> it = data.iterator();
                 while (it.hasNext()) {
                     Map<Component, VTLObject> next = structure.asMap(it.next());
                     generator.writeStartArray(next.size());
-                    for (VTLObject obj : next.values()) {
-                        mapper.writeValue(generator, obj.get());
+                    for (Component component : sortedStructure.values()) {
+                        mapper.writeValue(generator, next.get(component).get());
                     }
                     generator.writeEndArray();
                 }
@@ -289,6 +299,15 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
 
         }
+    }
+
+    /**
+     * Sort the given DataStructure by role and then name.
+     */
+    static DataStructure sortDataStructure(DataStructure structure) {
+        Set<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
+        sortedEntrySet.addAll(structure.entrySet());
+        return DataStructure.builder().putAll(sortedEntrySet).build();
     }
 
     private static void checkArgument(JsonParser parser, boolean check, String message) throws JsonMappingException {
