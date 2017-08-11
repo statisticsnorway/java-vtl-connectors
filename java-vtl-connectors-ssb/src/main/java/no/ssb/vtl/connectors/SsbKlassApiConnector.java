@@ -87,12 +87,12 @@ public class SsbKlassApiConnector implements Connector {
     private static final String SERVICE_URL = "http://data.ssb.no/api/klass/v1";
     private static final String[] DATA_PATHS = new String[]{
             "/classifications/{classificationId}/codes?from={codesFrom}"
-            //for example "/classifications/{classificationId}/codes?from={codesFrom}&to={codesTo}"
+            // for example "/classifications/{classificationId}/codes?from={codesFrom}&to={codesTo}"
     };
     private static final String FIELD_CODE = "code";
     private static final String FIELD_PERIOD = "period";
-    private static final String FIELD_VALID_FROM = "validFrom";
-    private static final String FIELD_VALID_TO = "validTo";
+    private static final String FIELD_VALID_FROM = "validFromInRequestedRange";
+    private static final String FIELD_VALID_TO = "validToInRequestedRange";
     private static final String FIELD_NAME = "name";
 
     private static final DataStructure DATA_STRUCTURE =
@@ -103,8 +103,9 @@ public class SsbKlassApiConnector implements Connector {
                     .build();
 
     private static final String KLASS_TIME_ZONE = "Europe/Oslo";
-    //Instead of using null when validTo not specified
-    private static final ZonedDateTime MAX_DATE = ZonedDateTime.ofInstant(Instant.parse("9999-12-31T00:00:00.000Z"), ZoneId.of(KLASS_TIME_ZONE));
+    // Instead of using null when validTo not specified
+    private static final ZonedDateTime MAX_DATE = ZonedDateTime.ofInstant(Instant.parse("9999-12-31T00:00:00.000Z"),
+            ZoneId.of(KLASS_TIME_ZONE));
 
     private final PeriodType periodType;
     private final List<UriTemplate> dataTemplates;
@@ -112,12 +113,10 @@ public class SsbKlassApiConnector implements Connector {
     private final RestTemplate restTemplate;
 
     /*
-        The list of available datasets:
-        http://data.ssb.no/api/klass/v1/classifications/search?query=kommune
-
-        Example dataset:
-        http://data.ssb.no/api/klass/v1/classifications/131/codes?from=2016-01-01
-
+     * The list of available datasets: http://data.ssb.no/api/klass/v1/classifications/search?query=kommune
+     *
+     * Example dataset: http://data.ssb.no/api/klass/v1/classifications/131/codes?from=2016-01-01
+     *
      */
 
     public SsbKlassApiConnector(ObjectMapper mapper, PeriodType periodType) {
@@ -145,13 +144,8 @@ public class SsbKlassApiConnector implements Connector {
         jacksonConverter = new MappingJackson2HttpMessageConverter(this.mapper);
 
         this.restTemplate = new RestTemplate(asList(
-                jacksonConverter
-        ));
+                jacksonConverter));
 
-    }
-
-    public SsbKlassApiConnector() {
-        this(new ObjectMapper(), PeriodType.YEAR);
     }
 
     /**
@@ -179,7 +173,7 @@ public class SsbKlassApiConnector implements Connector {
             headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
 
-            //http://data.ssb.no/api/klass/v1/classifications/131/codes?from=2016-01-01
+            // http://data.ssb.no/api/klass/v1/classifications/131/codes?from=2016-01-01
             ResponseEntity<DatasetWrapper> exchange = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
@@ -220,8 +214,7 @@ public class SsbKlassApiConnector implements Connector {
         } catch (RestClientException rce) {
             throw new ConnectorException(
                     format("error when accessing the dataset with ids %s", url),
-                    rce
-            );
+                    rce);
         }
     }
 
@@ -238,8 +231,9 @@ public class SsbKlassApiConnector implements Connector {
         for (String code : distinctCodes) {
             codeRows = getRowsForCode(rows, code);
 
-            //reverse ordered by validFrom
-            SortedMap<ZonedDateTime, Map<String, List<String>>> periodToNameToPeriod = new TreeMap<>(Comparator.reverseOrder());
+            // reverse ordered by validFrom
+            SortedMap<ZonedDateTime, Map<String, List<String>>> periodToNameToPeriod = new TreeMap<>(Comparator
+                    .reverseOrder());
             initializeSortedMap(codeRows, periodToNameToPeriod);
 
             Set<String> seenPeriods = new HashSet<>();
@@ -247,8 +241,8 @@ public class SsbKlassApiConnector implements Connector {
             tempExpanded = new ArrayList<>();
             for (Map<String, List<String>> nameToPeriod : periodToNameToPeriod.values()) {
                 for (Map.Entry<String, List<String>> e : nameToPeriod.entrySet()) {
-                    //reverse so that newest are checked first and we get newest name for a code
-                    //that was changed during a year
+                    // reverse so that newest are checked first and we get newest name for a code
+                    // that was changed during a year
                     Collections.reverse(e.getValue());
                     for (String period : e.getValue()) {
                         if (!seenPeriods.contains(period)) {
@@ -269,17 +263,15 @@ public class SsbKlassApiConnector implements Connector {
         return expanded;
     }
 
-    private void initializeSortedMap(List<Map<String, Object>> codeRows, SortedMap<ZonedDateTime, Map<String, List<String>>> periodToNameToPeriod) {
-        codeRows.forEach(codeRow ->
-                periodToNameToPeriod.put(
-                        (ZonedDateTime) codeRow.get(FIELD_VALID_FROM),
-                        ImmutableMap.of(
-                                (String) codeRow.get(FIELD_NAME),
-                                getPeriods(
-                                        (ZonedDateTime) codeRow.get(FIELD_VALID_FROM),
-                                        (ZonedDateTime) codeRow.get(FIELD_VALID_TO))
-                        )
-                ));
+    private void initializeSortedMap(List<Map<String, Object>> codeRows,
+                                     SortedMap<ZonedDateTime, Map<String, List<String>>> periodToNameToPeriod) {
+        codeRows.forEach(codeRow -> periodToNameToPeriod.put(
+                (ZonedDateTime) codeRow.get(FIELD_VALID_FROM),
+                ImmutableMap.of(
+                        (String) codeRow.get(FIELD_NAME),
+                        getPeriods(
+                                (ZonedDateTime) codeRow.get(FIELD_VALID_FROM),
+                                (ZonedDateTime) codeRow.get(FIELD_VALID_TO)))));
     }
 
     private List<Map<String, Object>> getRowsForCode(List<Map<String, Object>> rows, String code) {
