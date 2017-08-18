@@ -56,6 +56,10 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
 
         try {
 
+            if (Thread.interrupted()) {
+                throw new InterruptedException();
+            }
+
             DataPoint p = queue.take();
             if (p == EOS) {
                 hasMore = false;
@@ -65,6 +69,8 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
             action.accept(p);
 
         } catch (InterruptedException ie) {
+            hasMore = false;
+
             future.cancel(true);
             Thread.currentThread().interrupt();
 

@@ -119,6 +119,10 @@ public class SsbKlassApiConnector implements Connector {
      *
      */
 
+    public SsbKlassApiConnector() {
+        this(new ObjectMapper(), PeriodType.YEAR);
+    }
+
     public SsbKlassApiConnector(ObjectMapper mapper, PeriodType periodType) {
         this.periodType = periodType;
 
