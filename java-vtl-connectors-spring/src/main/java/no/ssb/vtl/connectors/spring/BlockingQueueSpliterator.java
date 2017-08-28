@@ -40,7 +40,7 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
     private final BlockingQueue<DataPoint> queue;
     private final Future<?> future;
     private final AtomicReference<Exception> exception;
-    private boolean hasMore = true;
+    private volatile boolean hasMore = true;
 
     public BlockingQueueSpliterator(BlockingQueue<DataPoint> queue, Future<?> future, AtomicReference<Exception> exception) {
         super(Long.MAX_VALUE, Spliterator.IMMUTABLE);
@@ -56,10 +56,6 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
 
         try {
 
-            if (Thread.interrupted()) {
-                throw new InterruptedException();
-            }
-
             DataPoint p = queue.take();
             if (p == EOS) {
                 hasMore = false;
@@ -69,24 +65,26 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
             action.accept(p);
 
         } catch (InterruptedException ie) {
-            hasMore = false;
-
-            future.cancel(true);
-            Thread.currentThread().interrupt();
-
-            Exception ex = this.exception.get();
-            if (ex != null)
-                throw new RuntimeException(ex);
-            else
-                throw new RuntimeException("stream interrupted");
+            cancelAndThrow();
         }
         return true;
+    }
+
+    private void cancelAndThrow() throws RuntimeException {
+        hasMore = false;
+        future.cancel(true);
+        Exception ex = this.exception.get();
+        if (ex != null)
+            throw new RuntimeException(ex);
+        else
+            throw new RuntimeException("stream interrupted");
     }
 
     @Override
     public void forEachRemaining(Consumer<? super DataPoint> action) {
         try {
-
+            if (!hasMore)
+                return;
             hasMore = false;
 
             DataPoint p;
@@ -94,9 +92,7 @@ class BlockingQueueSpliterator extends Spliterators.AbstractSpliterator<DataPoin
                 action.accept(p);
 
         } catch (InterruptedException ie) {
-            future.cancel(true);
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("stream interrupted");
+            cancelAndThrow();
         }
     }
 }
