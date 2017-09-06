@@ -152,6 +152,22 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Test
+    public void testWriteEmptyDatasetVersion2() throws Exception {
+
+        HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".empty.json");
+        Dataset result = (Dataset) converter.read(Dataset.class, message);
+
+        MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+        converter.write(result, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage);
+
+        // Go full circle!
+        JsonNode original = mapper.readTree(loadFile("ssb.dataset+json;version=2" + ".empty.json").getBody());
+        JsonNode written = mapper.readTree(outputMessage.getBodyAsBytes());
+
+        assertThat(written).isEqualTo(original);
+    }
+
+    @Test
     public void testWriteDatasetVersion2() throws Exception {
 
         HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");

@@ -1,0 +1,30 @@
+{
+  "structure": [
+    {
+      "name": "ICDATE",
+      "role": "IDENTIFIER",
+      "type": "DATE"
+    },
+    {
+      "name": "ICINTEGER",
+      "role": "IDENTIFIER",
+      "type": "INTEGER"
+    },
+    {
+      "name": "ICNUMERIC",
+      "role": "IDENTIFIER",
+      "type": "NUMERIC"
+    },
+    {
+      "name": "MCSTRING",
+      "role": "MEASURE",
+      "type": "STRING"
+    },
+    {
+      "name": "ACBOOLEAN",
+      "role": "ATTRIBUTE",
+      "type": "BOOLEAN"
+    }
+  ],
+  "data": []
+}

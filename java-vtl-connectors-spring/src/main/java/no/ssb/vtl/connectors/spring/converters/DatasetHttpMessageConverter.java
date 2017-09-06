@@ -49,9 +49,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -186,16 +186,19 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         checkCurrentName(parser, "data");
 
         // Advance to { "structure": {}, "" : [[ <--
-        parser.nextValue();
+        JsonToken jsonToken = parser.nextValue();
 
-        MappingIterator<List<Object>> data = mapper.readerFor(LIST_TYPE_REFERENCE)
-                .readValues(parser);
+        Stream<List<Object>> rawStream = Stream.empty();
+        if (JsonToken.END_ARRAY != jsonToken) {
+            MappingIterator<List<Object>> data = mapper.readerFor(LIST_TYPE_REFERENCE)
+                    .readValues(parser);
 
-        Stream<List<Object>> rawStream = StreamSupport.stream(
-                Spliterators.spliteratorUnknownSize(
-                        data, Spliterator.IMMUTABLE
-                ), false
-        );
+            rawStream = StreamSupport.stream(
+                    Spliterators.spliteratorUnknownSize(
+                            data, Spliterator.IMMUTABLE
+                    ), false
+            );
+        }
 
         Stream<DataPoint> convertedStream = rawStream.map(pointWrappers -> {
             return pointWrappers.stream()
@@ -305,7 +308,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
      * Sort the given DataStructure by role and then name.
      */
     static DataStructure sortDataStructure(DataStructure structure) {
-        Set<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
+        TreeSet<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
         sortedEntrySet.addAll(structure.entrySet());
         return DataStructure.builder().putAll(sortedEntrySet).build();
     }
