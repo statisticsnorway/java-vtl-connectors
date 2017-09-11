@@ -20,6 +20,7 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -28,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.Component;
@@ -56,6 +58,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.lang.String.format;
 import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
 import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON;
@@ -217,7 +220,6 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
                     }
             );
 
-        List<DataPoint> dataPoints = convertedStream.collect(Collectors.toList());
 
         return new Dataset() {
             @Override
@@ -227,7 +229,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
             @Override
             public Stream<DataPoint> getData() {
-                return dataPoints.stream();
+                return convertedStream;
             }
 
             @Override
@@ -276,7 +278,9 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             }
         }
 
-        try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
+        // Trying not to close.
+        JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody());
+        try {
             generator.writeStartObject();
 
             generator.writeArrayFieldStart(STRUCTURE_FIELD_NAME);
@@ -300,8 +304,17 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             generator.writeEndArray();
             generator.writeEndObject();
 
+            generator.flush();
 
+        } catch (Exception ex) {
+            Throwable cause = Throwables.getRootCause(ex);
+            throw new JsonGenerationException(
+                    format("Failed to serialize dataset: %s", firstNonNull(cause.getMessage(), "no message")                           ),
+                    cause,
+                    generator
+            );
         }
+
     }
 
     /**

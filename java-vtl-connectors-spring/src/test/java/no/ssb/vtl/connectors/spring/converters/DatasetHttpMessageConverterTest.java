@@ -20,11 +20,13 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
@@ -41,6 +43,7 @@ import org.springframework.mock.http.MockHttpOutputMessage;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +56,7 @@ import static no.ssb.vtl.model.Component.Role.ATTRIBUTE;
 import static no.ssb.vtl.model.Component.Role.IDENTIFIER;
 import static no.ssb.vtl.model.Component.Role.MEASURE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class DatasetHttpMessageConverterTest {
 
@@ -165,6 +169,27 @@ public class DatasetHttpMessageConverterTest {
         JsonNode written = mapper.readTree(outputMessage.getBodyAsBytes());
 
         assertThat(written).isEqualTo(original);
+    }
+
+    @Test
+    public void testSerializationFail() throws IOException {
+
+        DataStructure structure = DataStructure.builder().put("id", IDENTIFIER, String.class).build();
+        LinkedHashMap<String, Object> data = Maps.newLinkedHashMap();
+
+        // Failing stream.
+        TestDataset dataset = new TestDataset(structure, null);
+
+        MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+
+        assertThatThrownBy(() -> {
+            converter.write(dataset, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage);
+        })
+                .isExactlyInstanceOf(JsonGenerationException.class)
+                .hasCauseExactlyInstanceOf(NullPointerException.class)
+                .hasMessageContaining("Failed to serialize dataset");
+
+
     }
 
     @Test
