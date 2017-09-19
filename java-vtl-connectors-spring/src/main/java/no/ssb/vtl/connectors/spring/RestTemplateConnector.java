@@ -132,20 +132,17 @@ public class RestTemplateConnector implements Connector {
                             DataPoint e = it.next();
                             queue.put(e);
                         }
+
+                        queue.put(BlockingQueueSpliterator.EOS);
                         log.debug("done streaming for {} (queue {})", uri, queue.hashCode());
 
                     } catch (InterruptedException e) {
                         log.debug("interrupted while pushing datapoints from {} (queue {})", uri, queue.hashCode());
-                        queue.clear();
+                        reader.interrupt();
                     } catch (Exception e) {
                         log.debug("error while pushing datapoints from {} (queue {})", uri, queue.hashCode(), e);
-                        queue.clear();
                         exception.set(e);
                         reader.interrupt();
-                    } finally {
-                        boolean inserted = queue.offer(BlockingQueueSpliterator.EOS);
-                        if (!inserted)
-                            log.warn("could not insert EOS marker into the queue {}", queue.hashCode());
                     }
                     return null;
                 });
