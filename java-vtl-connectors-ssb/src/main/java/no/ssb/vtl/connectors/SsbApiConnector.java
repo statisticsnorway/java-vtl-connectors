@@ -33,6 +33,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import java.net.URI;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import no.ssb.jsonstat.JsonStatModule;
 import no.ssb.jsonstat.v2.DatasetBuildable;
 import no.ssb.jsonstat.v2.Dimension;
@@ -49,18 +57,9 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URI;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
+import static com.google.common.base.Preconditions.*;
+import static java.lang.String.*;
+import static java.util.Arrays.*;
 
 /**
  * A VTL connector that gets data from api.ssb.no.
@@ -123,7 +122,7 @@ public class SsbApiConnector implements Connector {
     }
 
     public Dataset getDataset(String identifier) throws ConnectorException {
-
+        
         ParameterizedTypeReference<Map<String, DatasetBuildable>> ref = new ParameterizedTypeReference<Map<String, DatasetBuildable>>() {
             // Just a reference.
         };
@@ -142,54 +141,8 @@ public class SsbApiConnector implements Connector {
             if (!exchange.getBody().values().iterator().hasNext()) {
                 throw new NotFoundException(format("empty dataset returned for the identifier %s", identifier));
             }
-
-            no.ssb.jsonstat.v2.Dataset dataset = exchange.getBody().values().iterator().next().build();
-
-            Map<String, Dimension> dimensions = dataset.getDimension();
-
-            ImmutableMultimap<Dimension.Roles, String> role = dataset.getRole();
-            Set<String> metric = ImmutableSet.copyOf(role.get(Dimension.Roles.METRIC));
-            Set<String> ids = Sets.symmetricDifference(dataset.getId(), metric);
-
-            Set<String> rotatedMetricName = computeMetricNames(dimensions, metric);
-            DataStructure structure = generateStructure(ids, rotatedMetricName);
-
-            Table<List<String>, List<String>, Number> table = dataset.asTable(ids, metric);
-
-            return new Dataset() {
-                @Override
-                public Stream<DataPoint> getData() {
-                    return table.rowMap().entrySet().stream()
-                            .map(entry -> {
-                                Map<String, Object> row = Maps.newHashMap();
-                                Iterator<String> identifierValues = entry.getKey().iterator();
-                                for (String id : ids) {
-                                    row.put(id, identifierValues.next());
-                                }
-                                entry.getValue().entrySet().forEach(metrics -> {
-                                    row.put(String.join("_", metrics.getKey()), metrics.getValue());
-                                });
-                                return row;
-                            }).map(structure::wrap);
-                }
-
-                @Override
-                public Optional<Map<String, Integer>> getDistinctValuesCount() {
-                    // TODO
-                    return Optional.empty();
-                }
-
-                @Override
-                public Optional<Long> getSize() {
-                    return Optional.of((long) dataset.getRows().size() * metric.size());
-                }
-
-                @Override
-                public DataStructure getDataStructure() {
-                    return structure;
-                }
-
-            };
+    
+            return buildDataset(exchange);
 
         } catch (RestClientException rce) {
             throw new ConnectorException(
@@ -198,7 +151,57 @@ public class SsbApiConnector implements Connector {
             );
         }
     }
+    
+    protected Dataset buildDataset(ResponseEntity<Map<String, DatasetBuildable>> exchange) {
+        no.ssb.jsonstat.v2.Dataset dataset = exchange.getBody().values().iterator().next().build();
+        
+        Map<String, Dimension> dimensions = dataset.getDimension();
+    
+        ImmutableMultimap<Dimension.Roles, String> role = dataset.getRole();
+        Set<String> metric = ImmutableSet.copyOf(role.get(Dimension.Roles.METRIC));
+        Set<String> ids = Sets.symmetricDifference(dataset.getId(), metric);
+        
+        Set<String> rotatedMetricName = computeMetricNames(dimensions, metric);
+        DataStructure structure = generateStructure(ids, rotatedMetricName);
+        
+        Table<List<String>, List<String>, Number> table = dataset.asTable(ids, metric);
+        
+        return new Dataset() {
+            @Override
+            public Stream<DataPoint> getData() {
+                return table.rowMap().entrySet().stream()
+                        .map(entry -> {
+                            Map<String, Object> row = Maps.newHashMap();
+                            Iterator<String> identifierValues = entry.getKey().iterator();
+                            for (String id : ids) {
+                                row.put(id, identifierValues.next());
+                            }
+                            entry.getValue().entrySet().forEach(metrics -> {
+                                row.put(String.join("_", metrics.getKey()), metrics.getValue());
+                            });
+                            return row;
+                        }).map(structure::wrap);
+            }
 
+            @Override
+            public Optional<Map<String, Integer>> getDistinctValuesCount() {
+                // TODO
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<Long> getSize() {
+                return Optional.of((long) dataset.getRows().size() * metric.size());
+            }
+
+            @Override
+            public DataStructure getDataStructure() {
+                return structure;
+            }
+
+        };
+    }
+    
     private Set<String> computeMetricNames(Map<String, Dimension> dimensions, Set<String> metric) {
         List<Set<String>> metricValues = Lists.newArrayList();
         for (String metricName : metric) {

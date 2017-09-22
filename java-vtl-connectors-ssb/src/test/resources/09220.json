@@ -1,0 +1,120 @@
+{
+  "dataset": {
+    "dimension": {
+      "Region": {
+        "label": "region",
+        "category": {
+          "index": {
+            "0": 0,
+            "01": 1,
+            "0101": 2
+          },
+          "label": {
+            "0": "Hele landet",
+            "01": "Østfold",
+            "0101": "Halden"
+          }
+        }
+      },
+      "Eierskap": {
+        "label": "eierskap",
+        "category": {
+          "index": {
+            "01": 0,
+            "02-03": 1,
+            "98": 2
+          },
+          "label": {
+            "01": "Kommune",
+            "02-03": "Fylkeskommune/stat",
+            "98": "Privat"
+          }
+        }
+      },
+      "ContentsCode": {
+        "label": "statistikkvariabel",
+        "category": {
+          "index": {
+            "Antall1": 0
+          },
+          "label": {
+            "Antall1": "Barnehager"
+          },
+          "unit": {
+            "Antall1": {
+              "base": "barnehager",
+              "decimals": 0
+            }
+          }
+        }
+      },
+      "Tid": {
+        "label": "år",
+        "category": {
+          "index": {
+            "1987": 0,
+            "1988": 1,
+            "1989": 2
+          },
+          "label": {
+            "1987": "1987",
+            "1988": "1988",
+            "1989": "1989"
+          }
+        }
+      },
+      "id": [
+        "Region",
+        "Eierskap",
+        "ContentsCode",
+        "Tid"
+      ],
+      "size": [
+        3,
+        3,
+        1,
+        3
+      ],
+      "role": {
+        "metric": [
+          "ContentsCode"
+        ],
+        "time": [
+          "Tid"
+        ]
+      }
+    },
+    "label": "Barnehager, etter region, eierskap, statistikkvariabel og år",
+    "source": "Statistisk sentralbyrå",
+    "updated": "2017-09-19T21:22:00Z",
+    "value": [
+      2195,
+      2357,
+      2495,
+      82,
+      95,
+      89,
+      1502,
+      1592,
+      1726,
+      83,
+      93,
+      95,
+      2,
+      1,
+      1,
+      50,
+      49,
+      51,
+      6,
+      6,
+      6,
+      0,
+      0,
+      0,
+      11,
+      11,
+      11
+    ]
+  }
+}
