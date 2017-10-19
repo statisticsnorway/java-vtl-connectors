@@ -36,7 +36,7 @@ import org.springframework.web.client.RestClientException;
 
 import static java.lang.String.*;
 
-public class PxApiConnector extends SsbApiConnector{
+public class PxApiConnector extends JsonStatConnector{
     
     private static final String BASE_URL = "http://data.ssb.no/api/v0/no/table/";
     
