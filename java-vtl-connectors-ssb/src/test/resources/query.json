@@ -1,0 +1,49 @@
+{
+  "query": [
+    {
+      "code": "Region",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "0",
+          "01",
+          "0101"
+        ]
+      }
+    },
+    {
+      "code": "Eierskap",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "01",
+          "02-03",
+          "98"
+        ]
+      }
+    },
+    {
+      "code": "ContentsCode",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "Antall1"
+        ]
+      }
+    },
+    {
+      "code": "Tid",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "1987",
+          "1988",
+          "1989"
+        ]
+      }
+    }
+  ],
+  "response": {
+    "format": "json-stat"
+  }
+}
