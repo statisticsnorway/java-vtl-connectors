@@ -58,18 +58,18 @@ public class PxApiConnectorTest {
     public void getDataset() throws Exception {
         InputStream fileStream = Resources.getResource(this.getClass(), "/09220.json").openStream();
         InputStream queryStream = Resources.getResource(this.getClass(), "/query.json").openStream();
-        JsonNode jsonNode = new ObjectMapper().readTree(queryStream);
+        JsonNode queryJson = new ObjectMapper().readTree(queryStream);
     
         mockServer.expect(requestTo("http://data.ssb.no/api/v0/no/table/09220"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(content().string(jsonNode.toString()))
+                .andExpect(content().string(queryJson.toString()))
                 .andRespond(withSuccess(
                         new InputStreamResource(fileStream),
                         MediaType.APPLICATION_JSON)
                 );
     
         Dataset dataset = connector.getDataset("09220?"+
-                IdentifierConverter.toQueryString(jsonNode.toString()));
+                IdentifierConverter.toQueryString(queryJson.toString()));
         assertThat(dataset).isNotNull();
     
         assertThat(dataset.getDataStructure().getRoles()).containsOnly(

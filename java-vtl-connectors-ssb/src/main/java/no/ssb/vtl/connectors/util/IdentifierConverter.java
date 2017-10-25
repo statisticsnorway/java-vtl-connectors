@@ -42,15 +42,25 @@ public class IdentifierConverter {
                 sb.append(trimQuotes(queryPart.get("code")));
                 
                 sb.append("=");
-                JsonNode values = queryPart.get("selection").get("values"); //TODO: Support other filter types
+                JsonNode selection = queryPart.get("selection");
+                JsonNode values = selection.get("values");
+                StringBuilder valuesBuilder = new StringBuilder();
                 for (int v = 0; v < values.size(); v++) {
                     if (v > 0) {
-                        sb.append("+");
+                        valuesBuilder.append("+");
                     }
                     JsonNode value = values.get(v);
-                    sb.append(trimQuotes(value));
+                    valuesBuilder.append(trimQuotes(value));
                     
                 }
+                JsonNode filter = selection.get("filter");
+                String format = "%s";
+                if (trimQuotes(filter).equals("all")) {
+                    format = "all(%s)";
+                } else if (trimQuotes(filter).equals("top")) {
+                    format = "top(%s)";
+                }
+                sb.append(String.format(format, valuesBuilder.toString()));
             }
         }
         return sb.toString();
@@ -72,7 +82,15 @@ public class IdentifierConverter {
             String value = keyValue[1];
             queryPart.put("code", key);
             ObjectNode selection = queryPart.putObject("selection");
-            selection.put("filter", "item"); //TODO: Support other filter types
+            if (value.matches("all\\(.*\\)")) {
+                selection.put("filter", "all");
+                value = value.substring(4, value.length() - 1);
+            } else if (value.matches("top\\(.*\\)")) {
+                selection.put("filter", "top");
+                value = value.substring(4, value.length() - 1);
+            } else {
+                selection.put("filter", "item");
+            }
             ArrayNode valuesNode = selection.putArray("values");
             String[] values = value.split("\\+");
             for (String value1 : values) {
