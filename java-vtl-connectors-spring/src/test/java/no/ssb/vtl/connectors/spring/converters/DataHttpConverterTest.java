@@ -68,6 +68,12 @@ public class DataHttpConverterTest {
     }
 
     @Test
+    public void testHandleNullType() throws Exception {
+        assertThat(converter.canRead(null, null, DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2)).isFalse();
+        assertThat(converter.canWrite(null, null, DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2)).isFalse();
+    }
+
+    @Test
     public void testWriteDataVersion2() throws Exception {
         Stream<DataPoint> dataPointStream = IntStream.rangeClosed(1, 10)
                 .boxed()

@@ -91,6 +91,12 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Test
+    public void testHandleNullType() throws Exception {
+        assertThat(converter.canRead(null, null, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON)).isFalse();
+        assertThat(converter.canWrite(null, null, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON)).isFalse();
+    }
+
+    @Test
     public void testReadDatasetVersion2() throws Exception {
         HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".json");
 
