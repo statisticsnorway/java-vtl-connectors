@@ -7,11 +7,11 @@
     <parent>
         <groupId>no.ssb.vtl.connectors</groupId>
         <artifactId>java-vtl-connectors-parent</artifactId>
-        <version>0.1.5-SNAPSHOT</version>
+        <version>0.1.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>utils</artifactId>
-    <version>0.1.5-SNAPSHOT</version>
+    <version>0.1.6-SNAPSHOT</version>
 
     <name>Java VTL Utility connectors</name>
 
