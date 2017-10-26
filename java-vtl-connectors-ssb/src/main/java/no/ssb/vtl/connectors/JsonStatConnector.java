@@ -33,14 +33,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import java.net.URI;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import no.ssb.jsonstat.JsonStatModule;
 import no.ssb.jsonstat.v2.DatasetBuildable;
 import no.ssb.jsonstat.v2.Dimension;
@@ -54,8 +46,17 @@ import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-import static com.google.common.base.Preconditions.*;
-import static java.util.Arrays.*;
+import java.net.URI;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Arrays.asList;
 
 public abstract class JsonStatConnector implements Connector{
     private final ObjectMapper mapper;
@@ -174,7 +175,7 @@ public abstract class JsonStatConnector implements Connector{
             roles.put(name, Component.Role.MEASURE);
             types.put(name, Number.class);
         }
-        return DataStructure.of((o, aClass) -> o, types, roles);
+        return DataStructure.of(types, roles);
     }
     
     public Dataset putDataset(String identifier, Dataset dataset) throws ConnectorException {

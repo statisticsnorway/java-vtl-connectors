@@ -23,7 +23,6 @@ package no.ssb.vtl.connectors;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
-import java.io.InputStream;
 import no.ssb.vtl.connectors.util.IdentifierConverter;
 import no.ssb.vtl.model.Component.Role;
 import no.ssb.vtl.model.Dataset;
@@ -35,9 +34,14 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import java.io.InputStream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 public class PxApiConnectorTest {
     
@@ -86,10 +90,10 @@ public class PxApiConnectorTest {
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsSequence(
-                        "0","01",2195,"1987",
-                        "0","01",2357,"1988",
-                        "0","01",2495,"1989",
-                        "0","02-03",82,"1987"
+                        "0","01",2195L,"1987",
+                        "0","01",2357L,"1988",
+                        "0","01",2495L,"1989",
+                        "0","02-03",82L,"1987"
                 );
     }
     
