@@ -121,7 +121,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
      */
     @Override
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
-        return canRead(TypeToken.of(type), mediaType);
+        return type != null && canRead(TypeToken.of(type), mediaType);
     }
 
     @Override
@@ -137,7 +137,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
-        return canWrite(clazz, mediaType);
+        return type != null && canWrite(clazz, mediaType);
     }
 
     @Override
