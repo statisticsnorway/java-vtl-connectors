@@ -82,7 +82,7 @@ public class PxApiConnectorTest {
         assertThat(dataset.getDataStructure().getTypes()).containsOnly(
                 entry("Region", String.class),
                 entry("Eierskap", String.class),
-                entry("Antall1", Number.class),
+                entry("Antall1", Double.class),
                 entry("Tid", String.class)
         );
     

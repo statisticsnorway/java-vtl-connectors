@@ -173,7 +173,7 @@ public abstract class JsonStatConnector implements Connector{
         }
         for (String name : metrics) {
             roles.put(name, Component.Role.MEASURE);
-            types.put(name, Number.class);
+            types.put(name, Double.class); //TODO: Use dimension.category.unit.decimals to determine type (Long or Double)
         }
         return DataStructure.of(types, roles);
     }

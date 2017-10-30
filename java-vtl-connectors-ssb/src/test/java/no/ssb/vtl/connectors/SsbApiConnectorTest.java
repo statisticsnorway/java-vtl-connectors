@@ -84,18 +84,18 @@ public class SsbApiConnectorTest {
         );
 
         assertThat(dataset.getDataStructure().getTypes()).containsOnly(
-                entry("Dode3", Number.class),
-                entry("Fodselsoverskudd4", Number.class),
-                entry("Fodte2", Number.class),
-                entry("Folketallet11", Number.class),
-                entry("Folketilvekst10", Number.class),
-                entry("Fraflytting8", Number.class),
-                entry("Innvandring5", Number.class),
-                entry("Nettoinnflytting9", Number.class),
+                entry("Dode3", Double.class),
+                entry("Fodselsoverskudd4", Double.class),
+                entry("Fodte2", Double.class),
+                entry("Folketallet11", Double.class),
+                entry("Folketilvekst10", Double.class),
+                entry("Fraflytting8", Double.class),
+                entry("Innvandring5", Double.class),
+                entry("Nettoinnflytting9", Double.class),
                 entry("Region", String.class),
                 entry("Tid", String.class),
-                entry("Tilflytting7", Number.class),
-                entry("Utvandring6", Number.class)
+                entry("Tilflytting7", Double.class),
+                entry("Utvandring6", Double.class)
         );
 
         assertThat(dataset.getData())
