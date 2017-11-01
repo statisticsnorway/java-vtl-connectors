@@ -274,8 +274,14 @@ public class RestTemplateConnector implements Connector {
 
         @Override
         public String toString() {
+            URI uriWithoutQuery;
+            try {
+                uriWithoutQuery = new URI(uri.getScheme(), uri.getHost(), uri.getPath(), null);
+            } catch (URISyntaxException e) {
+                uriWithoutQuery = uri;
+            }
             return toStringHelper(this)
-                    .add("uri", uri)
+                    .add("uri", uriWithoutQuery)
                     .toString();
         }
 
