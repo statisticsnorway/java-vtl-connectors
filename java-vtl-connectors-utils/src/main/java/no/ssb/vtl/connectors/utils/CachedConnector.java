@@ -21,10 +21,13 @@ package no.ssb.vtl.connectors.utils;
  */
 
 
-
-import com.google.common.base.Supplier;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableList;
 import no.ssb.vtl.connectors.Connector;
+import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.Dataset;
 import no.ssb.vtl.model.Order;
@@ -32,55 +35,190 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * A {@link Connector} wrapper that saves data in a cache.
+ * A {@link Connector} that saves data in a cache.
  */
 public abstract class CachedConnector extends ForwardingConnector {
 
     private static final Logger log = LoggerFactory.getLogger(CachedConnector.class);
-    private final Cache<DatasetKey, Supplier<Stream<DataPoint>>> cache;
 
-    private CachedConnector(Cache<DatasetKey, Supplier<Stream<DataPoint>>> cache) {
-        this.cache = checkNotNull(cache);
+    private final Cache<String, CacheProxyDataset> datasetCache;
+    private final Cache<String, ImmutableList<DataPoint>> sortableCache;
+    private final Cache<SortedKey, ImmutableList<DataPoint>> sortedCache;
+
+    private CachedConnector(CacheBuilder<Object, Object> cacheSpec) {
+        checkNotNull(cacheSpec);
+        this.datasetCache = cacheSpec.recordStats().build();
+        this.sortableCache = cacheSpec.recordStats().build();
+        this.sortedCache = cacheSpec.recordStats().build();
     }
 
-    abstract DatasetKey computeKey(
-            String identifier,
-            Order orders,
-            Dataset.Filtering filtering,
-            Set<String> components
-    );
+    private CachedConnector() {
+        this.datasetCache = CacheBuilder.newBuilder().recordStats().build();
+        this.sortableCache = CacheBuilder.newBuilder().recordStats().build();
+        this.sortedCache = CacheBuilder.newBuilder().recordStats().build();
+    }
 
-    private static class DatasetKey {
+    public static CachedConnector create(Connector connector) {
+        return new CachedConnector() {
+            @Override
+            protected Connector delegate() {
+                return connector;
+            }
+        };
+    }
 
+    public static CachedConnector create(Connector connector, CacheBuilder<Object, Object> cacheSpec) {
+        return new CachedConnector(cacheSpec) {
+            @Override
+            protected Connector delegate() {
+                return connector;
+            }
+        };
+    }
+
+    @Override
+    public Dataset getDataset(String identifier) throws ConnectorException {
+        try {
+            return datasetCache.get(identifier, () -> {
+                Dataset dataset = super.getDataset(identifier);
+                return new CacheProxyDataset(identifier, sortableCache, sortedCache) {
+                    @Override
+                    protected Dataset delegate() {
+                        return dataset;
+                    }
+                };
+            });
+        } catch (ExecutionException e) {
+            throw new RuntimeException("cache error", e.getCause());
+        }
     }
 
     /**
-     * A Dataset that checks if the structure is available.
+     * Key for sorted values.
      */
-    private abstract class CachedDataset extends ForwardingDataset {
+    private final static class SortedKey {
+        private final String identifier;
+        private final Order order;
 
-        private final String identifier = "";
+        private SortedKey(String identifier, Order order) {
+            this.identifier = checkNotNull(identifier);
+            this.order = checkNotNull(order);
+        }
 
         @Override
-        public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
-            try {
-                DatasetKey key = computeKey(identifier, orders, filtering, components);
-                Supplier<Stream<DataPoint>> ifPresent = cache.getIfPresent(key);
-                if (ifPresent != null)
-                    return Optional.of(ifPresent.get());
-                else
-                    return getData(orders, filtering, components);
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .addValue(identifier)
+                    .add("order", order)
+                    .toString();
+        }
 
-            } catch (Exception e) {
-                log.warn("could not compute cache key for {}", this);
-                return delegate().getData(orders, filtering, components);
-            }
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            SortedKey sortedKey = (SortedKey) o;
+            return Objects.equal(identifier, sortedKey.identifier) &&
+                    Objects.equal(order, sortedKey.order);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(identifier, order);
+        }
+    }
+
+    private static final class CacheSpliterator extends Spliterators.AbstractSpliterator<DataPoint> {
+
+        private final Runnable callback;
+        private final Spliterator<DataPoint> spliterator;
+        private boolean hasMore = true;
+
+        private CacheSpliterator(Runnable callback, Spliterator<DataPoint> spliterator) {
+            super(spliterator.estimateSize(), spliterator.characteristics() /* TODO: check this */);
+            this.spliterator = spliterator;
+            this.callback = checkNotNull(callback);
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super DataPoint> action) {
+            if (!hasMore)
+                return false;
+
+            hasMore = spliterator.tryAdvance(action);
+            if (!hasMore)
+                callback.run();
+
+            return true;
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super DataPoint> action) {
+            spliterator.forEachRemaining(action);
+            callback.run();
+        }
+    }
+
+    protected static abstract class CacheProxyDataset extends ForwardingDataset {
+
+        private final String identifier;
+        private final Cache<String, ImmutableList<DataPoint>> sortableCache;
+        private final Cache<SortedKey, ImmutableList<DataPoint>> sortedCache;
+
+        protected CacheProxyDataset(String identifier, Cache<String, ImmutableList<DataPoint>> sortableCache, Cache<SortedKey, ImmutableList<DataPoint>> sortedCache) {
+            this.identifier = checkNotNull(identifier);
+            this.sortableCache = checkNotNull(sortableCache);
+            this.sortedCache = checkNotNull(sortedCache);
+        }
+
+
+        @Override
+        public Stream<DataPoint> getData() {
+            ImmutableList<DataPoint> cachedData = sortableCache.getIfPresent(identifier);
+            if (cachedData != null)
+                return cachedData.stream().map(DataPoint::create);
+
+            // Compute the data.
+            ImmutableList.Builder<DataPoint> cacheDataBuilder = ImmutableList.builder();
+            Stream<DataPoint> stream = delegate().getData().peek(dataPoint -> {
+                cacheDataBuilder.add(DataPoint.create(dataPoint));
+            });
+
+            // Hook on the spliterator to know when the stream is finished.
+            return StreamSupport.stream(new CacheSpliterator(() -> {
+                sortableCache.put(identifier, cacheDataBuilder.build());
+            }, stream.spliterator()), false).onClose(stream::close);
+        }
+
+        @Override
+        public Optional<Stream<DataPoint>> getData(Order order) {
+            SortedKey key = new SortedKey(identifier, order);
+            ImmutableList<DataPoint> sortedCachedData = sortedCache.getIfPresent(key);
+            if (sortedCachedData != null)
+                return Optional.of(sortedCachedData.stream().map(DataPoint::create));
+
+            // Compute the data.
+            ImmutableList.Builder<DataPoint> cacheDataBuilder = ImmutableList.builder();
+            Stream<DataPoint> sortedStream = delegate().getData(order).orElseThrow(() ->
+                    new IllegalArgumentException("could not get sorted data from " + delegate())
+            ).peek(dataPoint -> {
+                cacheDataBuilder.add(DataPoint.create(dataPoint));
+            });
+
+            // Hook on the spliterator to know when the stream is finished.
+            return Optional.of(StreamSupport.stream(new CacheSpliterator(() -> {
+                sortedCache.put(key, cacheDataBuilder.build());
+            }, sortedStream.spliterator()), false).onClose(sortedStream::close));
         }
     }
 }
