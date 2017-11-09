@@ -134,7 +134,7 @@ public class RestTemplateConnectorTest {
     @Test
     public void testOrderWithExistingSort() throws Exception {
 
-        UriComponentsBuilder uri = UriComponentsBuilder.fromHttpUrl("http://test/api/id?foo=bar&foo2=bar2");
+        UriComponentsBuilder uriWithOrder = UriComponentsBuilder.fromHttpUrl("http://test/api/id?sort=foo&other=param");
 
         DataStructure structure = DataStructure.builder()
                 .put("id1", Component.Role.IDENTIFIER, String.class)
@@ -149,8 +149,6 @@ public class RestTemplateConnectorTest {
                 .put("id2", Order.Direction.DESC)
                 .put("id4", Order.Direction.ASC)
                 .build();
-
-        UriComponentsBuilder uriWithOrder = UriComponentsBuilder.fromHttpUrl("http://test/api/id?sort=foo&other=param");
 
         UriComponentsBuilder orderUri = RestTemplateConnector.createOrderUri(uriWithOrder.cloneBuilder().cloneBuilder(), order, structure);
 
