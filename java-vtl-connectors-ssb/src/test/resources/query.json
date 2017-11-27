@@ -3,11 +3,9 @@
     {
       "code": "Region",
       "selection": {
-        "filter": "item",
+        "filter": "all",
         "values": [
-          "0",
-          "01",
-          "0101"
+          "*"
         ]
       }
     },
@@ -34,11 +32,9 @@
     {
       "code": "Tid",
       "selection": {
-        "filter": "item",
+        "filter": "top",
         "values": [
-          "1987",
-          "1988",
-          "1989"
+          "3"
         ]
       }
     }

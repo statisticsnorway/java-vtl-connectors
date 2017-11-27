@@ -39,12 +39,12 @@ public class IdentifierConverterTest {
         InputStream queryStream = Resources.getResource(this.getClass(), "/query.json").openStream();
         String query = CharStreams.toString(new InputStreamReader(queryStream, Charsets.UTF_8));
         String urlParams = IdentifierConverter.toQueryString(query);
-        assertThat(urlParams).isEqualTo("Region=0+01+0101&Eierskap=01+02-03+98&ContentsCode=Antall1&Tid=1987+1988+1989");
+        assertThat(urlParams).isEqualTo("Region=all(*)&Eierskap=01+02-03+98&ContentsCode=Antall1&Tid=top(3)");
     }
     
     @Test
     public void toJson() throws Exception {
-        JsonNode jsonNode = IdentifierConverter.toJson("Region=0+01+0101&Eierskap=01+02-03+98&ContentsCode=Antall1&Tid=1987+1988+1989");
+        JsonNode jsonNode = IdentifierConverter.toJson("Region=all(*)&Eierskap=01+02-03+98&ContentsCode=Antall1&Tid=top(3)");
         System.out.println(jsonNode);
         assertThat(jsonNode).isNotNull();
     
