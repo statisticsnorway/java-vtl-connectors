@@ -34,6 +34,7 @@ public enum RoleMapping {
     NUMERIC(Double.class),
     DATE(Instant.class),
     BOOLEAN(Boolean.class),
+    NUMBER(Number.class),
 
     // Kept for compatibility.
     FLOAT(Double.class),
@@ -68,6 +69,9 @@ public enum RoleMapping {
 
         if (token.isSubtypeOf(Boolean.class))
             return BOOLEAN;
+
+        if (token.isSubtypeOf(Number.class))
+            return NUMBER;
 
         throw new UnsupportedOperationException("could not convert type" + type);
     }
