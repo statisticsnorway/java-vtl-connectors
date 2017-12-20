@@ -49,8 +49,8 @@ public class PxApiConnectorTest {
     private PxApiConnector connector;
     
     @Before
-    public void setUp() throws Exception {
-        connector = new PxApiConnector();
+    public void setUp() {
+        connector = new PxApiConnector("http://data.ssb.no/api/v0/no/table/");
         mockServer = MockRestServiceServer.createServer(connector.getRestTemplate());
     }
     
@@ -68,7 +68,7 @@ public class PxApiConnectorTest {
                         MediaType.APPLICATION_JSON)
                 );
     
-        Dataset dataset = connector.getDataset("09220?"+
+        Dataset dataset = connector.getDataset("http://data.ssb.no/api/v0/no/table/09220?"+
                 IdentifierConverter.toQueryString(queryJson.toString()));
         assertThat(dataset).isNotNull();
     
@@ -98,7 +98,7 @@ public class PxApiConnectorTest {
     }
     
     @Test
-    public void canHandle() throws Exception {
+    public void canHandle() {
         boolean canHandle = connector.canHandle("http://data.ssb.no/api/v0/no/table/09220");
         assertThat(canHandle).isTrue();
     }
