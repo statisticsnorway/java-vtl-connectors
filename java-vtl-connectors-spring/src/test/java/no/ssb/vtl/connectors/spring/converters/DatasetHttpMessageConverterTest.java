@@ -83,7 +83,7 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
@@ -91,7 +91,7 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Test
-    public void testHandleNullType() throws Exception {
+    public void testHandleNullType() {
         assertThat(converter.canRead(null, null, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON)).isFalse();
         assertThat(converter.canWrite(null, null, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON)).isFalse();
     }
@@ -127,7 +127,7 @@ public class DatasetHttpMessageConverterTest {
 
         DataStructure structure1 = DataStructure.builder()
                 .put("Id1", IDENTIFIER, String.class)
-                .put("Me2", MEASURE, String.class)
+                .put("Me2", MEASURE, Number.class)
                 .put("Id2", IDENTIFIER, String.class)
                 .put("At2", ATTRIBUTE, String.class)
                 .put("Me1", MEASURE, String.class)
@@ -136,7 +136,7 @@ public class DatasetHttpMessageConverterTest {
 
         DataStructure structure2 = DataStructure.builder()
                 .put("At2", ATTRIBUTE, String.class)
-                .put("Me2", MEASURE, String.class)
+                .put("Me2", MEASURE, Number.class)
                 .put("At1", ATTRIBUTE, String.class)
                 .put("Me1", MEASURE, String.class)
                 .put("Id2", IDENTIFIER, String.class)
@@ -182,7 +182,7 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Test
-    public void testSerializationFail() throws IOException {
+    public void testSerializationFail() {
 
         DataStructure structure = DataStructure.builder().put("id", IDENTIFIER, String.class).build();
         LinkedHashMap<String, Object> data = Maps.newLinkedHashMap();
