@@ -16,6 +16,11 @@
       "type": "NUMERIC"
     },
     {
+      "name": "MCNUMBER",
+      "role": "MEASURE",
+      "type": "NUMBER"
+    },
+    {
       "name": "MCSTRING",
       "role": "MEASURE",
       "type": "STRING"

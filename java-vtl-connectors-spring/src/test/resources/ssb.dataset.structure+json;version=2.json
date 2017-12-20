@@ -15,6 +15,11 @@
     "type": "NUMERIC"
   },
   {
+    "name": "NumberMeasure",
+    "role": "MEASURE",
+    "type": "NUMBER"
+  },
+  {
     "name": "Type",
     "role": "ATTRIBUTE",
     "type": "INTEGER"
