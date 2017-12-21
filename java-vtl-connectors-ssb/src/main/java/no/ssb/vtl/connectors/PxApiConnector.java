@@ -20,9 +20,6 @@ package no.ssb.vtl.connectors;
  * =========================LICENSE_END==================================
  */
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Map;
 import no.ssb.jsonstat.v2.DatasetBuildable;
 import no.ssb.vtl.connectors.util.IdentifierConverter;
 import no.ssb.vtl.model.Dataset;
@@ -34,15 +31,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 
-import static java.lang.String.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
 
 public class PxApiConnector extends JsonStatConnector{
     
-    private static final String BASE_URL = "http://data.ssb.no/api/v0/no/table/";
-    
+    private final String baseUrl;
+
+    public PxApiConnector(String baseUrl) {
+        checkNotNull(baseUrl);
+        this.baseUrl = baseUrl;
+    }
+
     @Override
     public boolean canHandle(String identifier) {
-        return identifier.startsWith(BASE_URL);
+        return identifier.startsWith(baseUrl);
     }
     
     @Override
@@ -53,22 +60,18 @@ public class PxApiConnector extends JsonStatConnector{
         };
     
         try {
-        
-            if (identifier.startsWith(BASE_URL)) {
-                identifier = identifier.replace(BASE_URL, "");
-            }
-    
+
             int urlParameterIndex = identifier.indexOf("?");
             String query = identifier.substring(urlParameterIndex +1);
-            identifier = identifier.substring(0, urlParameterIndex);
+            String url = identifier.substring(0, urlParameterIndex);
     
-            RequestEntity requestEntity = RequestEntity.post(new URI(BASE_URL + "/" + identifier))
+            RequestEntity requestEntity = RequestEntity.post(new URI(url))
                     .accept(MediaType.APPLICATION_JSON).body(IdentifierConverter.toJson(query));
     
             ResponseEntity<Map<String, DatasetBuildable>> exchange = getRestTemplate().exchange(
-                    BASE_URL +"/{id}",
+                    "{url}",
                     HttpMethod.POST,
-                    requestEntity, ref, identifier);
+                    requestEntity, ref, url);
             
     
             if (!exchange.getBody().values().iterator().hasNext()) {
