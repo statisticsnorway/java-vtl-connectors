@@ -35,6 +35,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
 
 public class PxApiConnector extends JsonStatConnector{
@@ -42,6 +43,7 @@ public class PxApiConnector extends JsonStatConnector{
     private final String baseUrl;
 
     public PxApiConnector(String baseUrl) {
+        checkNotNull(baseUrl);
         this.baseUrl = baseUrl;
     }
 
