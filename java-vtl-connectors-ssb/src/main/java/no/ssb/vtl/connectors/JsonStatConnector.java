@@ -41,6 +41,7 @@ import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
+import no.ssb.vtl.model.Order;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -145,7 +146,15 @@ public abstract class JsonStatConnector implements Connector{
             public Optional<Long> getSize() {
                 return Optional.of((long) dataset.getRows().size() * metric.size());
             }
-            
+
+            @Override
+            public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
+                return Optional.of(getData().sorted(orders).filter(filtering).map(o -> {
+                    // TODO
+                    return o;
+                }));
+            }
+
             @Override
             public DataStructure getDataStructure() {
                 return structure;
