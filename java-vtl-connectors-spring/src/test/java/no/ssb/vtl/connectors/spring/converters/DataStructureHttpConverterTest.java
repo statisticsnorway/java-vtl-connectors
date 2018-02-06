@@ -42,7 +42,7 @@ public class DataStructureHttpConverterTest {
     private ObjectMapper mapper;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         mapper = new ObjectMapper();
         converter = new DataStructureHttpConverter(mapper);
     }
@@ -66,6 +66,7 @@ public class DataStructureHttpConverterTest {
                         (Class) String.class,
                         (Class) Instant.class,
                         (Class) Double.class,
+                        (Class) Number.class,
                         (Class) Long.class,
                         (Class) Boolean.class
                 );
@@ -77,13 +78,14 @@ public class DataStructureHttpConverterTest {
                         Component.Role.IDENTIFIER,
                         Component.Role.ATTRIBUTE,
                         Component.Role.MEASURE,
+                        Component.Role.MEASURE,
                         Component.Role.ATTRIBUTE,
                         Component.Role.ATTRIBUTE
                 );
     }
 
     @Test
-    public void testCanRead() throws Exception {
+    public void testCanRead() {
         softly.assertThat(
 
                 converter.canRead(DataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON)
@@ -104,7 +106,7 @@ public class DataStructureHttpConverterTest {
     }
 
     @Test
-    public void canWrite() throws Exception {
+    public void canWrite() {
         softly.assertThat(
 
                 converter.canWrite(DataStructure.class, DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON)

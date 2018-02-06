@@ -19,6 +19,14 @@
     {
       "type": "BOOLEAN",
       "val": true
+    },
+    {
+      "type": "NUMBER",
+      "val": 1
+    },
+    {
+      "type": "NUMBER",
+      "val": 1.5
     }
   ],
   [
@@ -41,6 +49,14 @@
     {
       "type": "BOOLEAN",
       "val": false
+    },
+    {
+      "type": "NUMBER",
+      "val": -1
+    },
+    {
+      "type": "NUMBER",
+      "val": -1.5
     }
   ],
   [
@@ -63,6 +79,14 @@
     {
       "type": "BOOLEAN",
       "val": true
+    },
+    {
+      "type": "NUMBER",
+      "val": 2
+    },
+    {
+      "type": "NUMBER",
+      "val": 2.25
     }
   ],
   [
@@ -85,6 +109,14 @@
     {
       "type": "BOOLEAN",
       "val": null
+    },
+    {
+      "type": "NUMBER",
+      "val": -9
+    },
+    {
+      "type": "NUMBER",
+      "val": -2.25
     }
   ],
   [
@@ -104,6 +136,8 @@
       "type": "INTEGER",
       "val": 5
     },
+    null,
+    null,
     null
   ]
 ]

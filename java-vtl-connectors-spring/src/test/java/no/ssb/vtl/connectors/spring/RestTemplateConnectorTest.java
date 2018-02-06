@@ -22,23 +22,32 @@ package no.ssb.vtl.connectors.spring;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import no.ssb.vtl.connectors.spring.converters.DataHttpConverter;
 import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
 import no.ssb.vtl.model.Order;
 import org.junit.Test;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
-import no.ssb.vtl.connectors.spring.converters.DataHttpConverter;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
+import static com.google.common.io.Resources.getResource;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
  * Created by hadrien on 13/06/17.
@@ -49,7 +58,6 @@ public class RestTemplateConnectorTest {
     public void getData() throws Exception {
 
         // Setup the factory.
-
         SimpleClientHttpRequestFactory schrf = new SimpleClientHttpRequestFactory();
         schrf.setBufferRequestBody(false);
         schrf.setTaskExecutor(new SimpleAsyncTaskExecutor());
@@ -60,6 +68,17 @@ public class RestTemplateConnectorTest {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
         RestTemplate template = new RestTemplate(schrf);
+        MockRestServiceServer mockServer = MockRestServiceServer.createServer(template);
+
+        InputStream inputStream = getResource("ssb.dataset.data+json;version=2.json").openStream();
+        InputStreamResource resource = new InputStreamResource(inputStream);
+        mockServer.expect(
+                requestTo("dataset")
+        ).andExpect(
+                method(HttpMethod.GET)
+        ).andRespond(
+                withSuccess(resource, MediaType.parseMediaType("application/ssb.dataset.data+json;version=2"))
+        );
 
         template.getInterceptors().add(
                 new AuthorizationTokenInterceptor()
@@ -76,7 +95,9 @@ public class RestTemplateConnectorTest {
                 executorService
         );
 
-        Dataset dataset = restTemplateConnector.getDataset("http://www.mocky.io/v2/594a48ee10000081031aa3fc");
+
+
+        Dataset dataset = restTemplateConnector.getDataset("dataset");
         Stream<DataPoint> data = dataset.getData();
         data.forEach(System.out::println);
 
@@ -113,7 +134,7 @@ public class RestTemplateConnectorTest {
     @Test
     public void testOrderWithExistingSort() throws Exception {
 
-        UriComponentsBuilder uri = UriComponentsBuilder.fromHttpUrl("http://test/api/id?foo=bar&foo2=bar2");
+        UriComponentsBuilder uriWithOrder = UriComponentsBuilder.fromHttpUrl("http://test/api/id?sort=foo&other=param");
 
         DataStructure structure = DataStructure.builder()
                 .put("id1", Component.Role.IDENTIFIER, String.class)
@@ -128,8 +149,6 @@ public class RestTemplateConnectorTest {
                 .put("id2", Order.Direction.DESC)
                 .put("id4", Order.Direction.ASC)
                 .build();
-
-        UriComponentsBuilder uriWithOrder = UriComponentsBuilder.fromHttpUrl("http://test/api/id?sort=foo&other=param");
 
         UriComponentsBuilder orderUri = RestTemplateConnector.createOrderUri(uriWithOrder.cloneBuilder().cloneBuilder(), order, structure);
 

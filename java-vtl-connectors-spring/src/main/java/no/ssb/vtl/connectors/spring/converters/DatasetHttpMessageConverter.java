@@ -20,14 +20,16 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.Component;
@@ -49,13 +51,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.lang.String.format;
 import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
 import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON;
@@ -117,7 +121,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
      */
     @Override
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
-        return canRead(TypeToken.of(type), mediaType);
+        return type != null && canRead(TypeToken.of(type), mediaType);
     }
 
     @Override
@@ -133,7 +137,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
-        return canWrite(clazz, mediaType);
+        return type != null && canWrite(clazz, mediaType);
     }
 
     @Override
@@ -185,36 +189,65 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         // Expect { "data": [
         checkCurrentName(parser, "data");
 
-        // Advance to { "structure": {}, "" : [[ <--
-        parser.nextValue();
+        // Advance to { "structure": {}, "data" : [[ <--
+        parser.nextToken();
 
-        MappingIterator<List<Object>> data = mapper.readerFor(LIST_TYPE_REFERENCE)
-                .readValues(parser);
+        Stream<DataPoint> stream = Stream.empty();
+        if (JsonToken.START_ARRAY == parser.currentToken()) {
 
-        Stream<List<Object>> rawStream = StreamSupport.stream(
-                Spliterators.spliteratorUnknownSize(
-                        data, Spliterator.IMMUTABLE
-                ), false
-        );
+            List<? extends Class<?>> expectedTypes = structure.values().stream()
+                    .map(Component::getType)
+                    .collect(Collectors.toList());
 
-        Stream<DataPoint> convertedStream = rawStream.map(pointWrappers -> {
-            return pointWrappers.stream()
-                    .map(VTLObject::of)
-                    .collect(Collectors.toList()
-                    );
-        }).map(DataPoint::create);
+            stream = StreamSupport.stream(new Spliterators.AbstractSpliterator<DataPoint>(
+                    Long.MAX_VALUE, Spliterator.IMMUTABLE
+            ) {
+                @Override
+                public boolean tryAdvance(Consumer<? super DataPoint> action) {
+                    try {
+                        if (parser.currentToken() == JsonToken.START_ARRAY) {
+                            parser.nextToken();
 
-        if (token.isSupertypeOf(STREAM_TYPE_TOKEN))
-            return convertedStream.onClose(() -> {
-                        try {
-                            parser.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(format("could not close parser %s", parser), e);
+                            DataPoint dataPoint = DataPoint.create(expectedTypes.size());
+                            int pos = 0;
+                            for (Class<?> expectedType : expectedTypes) {
+                                Object value = parser.readValueAs(expectedType);
+                                dataPoint.set(pos++, VTLObject.of(value));
+                            }
+
+                            action.accept(dataPoint);
+
+                            parser.nextToken();
+                            parser.nextToken();
+
+                            return true;
+                        }
+                        return false;
+                    } catch (IOException ioe) {
+                        if (ioe instanceof JsonMappingException) {
+                            JsonMappingException jme = (JsonMappingException) ioe;
+                            throw new RuntimeJsonMappingException(jme.getMessage(),jme);
+                        } else {
+                            throw new RuntimeException(ioe.getMessage(), ioe);
                         }
                     }
-            );
+                }
+            }, false);
 
-        List<DataPoint> dataPoints = convertedStream.collect(Collectors.toList());
+        }
+
+        Stream<DataPoint> convertedStream = stream.onClose(() -> {
+                    try {
+                        parser.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(format("could not close parser %s", parser), e);
+                    }
+                }
+        );
+
+        if (token.isSupertypeOf(STREAM_TYPE_TOKEN)) {
+            return convertedStream;
+        }
 
         return new Dataset() {
             @Override
@@ -224,7 +257,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
             @Override
             public Stream<DataPoint> getData() {
-                return dataPoints.stream();
+                return convertedStream;
             }
 
             @Override
@@ -273,7 +306,9 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             }
         }
 
-        try (JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody())) {
+        // Trying not to close.
+        JsonGenerator generator = mapper.getFactory().createGenerator(outputMessage.getBody());
+        try {
             generator.writeStartObject();
 
             generator.writeArrayFieldStart(STRUCTURE_FIELD_NAME);
@@ -297,15 +332,24 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             generator.writeEndArray();
             generator.writeEndObject();
 
+            generator.flush();
 
+        } catch (Exception ex) {
+            Throwable cause = Throwables.getRootCause(ex);
+            throw new JsonGenerationException(
+                    format("Failed to serialize dataset: %s", firstNonNull(cause.getMessage(), "no message")                           ),
+                    cause,
+                    generator
+            );
         }
+
     }
 
     /**
      * Sort the given DataStructure by role and then name.
      */
     static DataStructure sortDataStructure(DataStructure structure) {
-        Set<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
+        TreeSet<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
         sortedEntrySet.addAll(structure.entrySet());
         return DataStructure.builder().putAll(sortedEntrySet).build();
     }

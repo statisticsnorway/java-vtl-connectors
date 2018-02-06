@@ -59,12 +59,18 @@ public class DataHttpConverterTest {
     };
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
 
         converter = new DataHttpConverter(mapper);
+    }
+
+    @Test
+    public void testHandleNullType() {
+        assertThat(converter.canRead(null, null, DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2)).isFalse();
+        assertThat(converter.canWrite(null, null, DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2)).isFalse();
     }
 
     @Test
@@ -111,10 +117,14 @@ public class DataHttpConverterTest {
                 .filteredOn(vtlObject -> !VTLObject.NULL.equals(vtlObject))
                 .extracting(input -> input.get().getClass())
                 .containsExactly(
-                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class, (Class) Boolean.class,
-                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class, (Class) Boolean.class,
-                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class, (Class) Boolean.class,
-                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class, // null,
+                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class,
+                        (Class) Boolean.class, (Class) Long.class, (Class) Double.class,
+                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class,
+                        (Class) Boolean.class, (Class) Long.class, (Class) Double.class,
+                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class,
+                        (Class) Boolean.class, (Class) Long.class, (Class) Double.class,
+                        (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class,
+                        (Class) Long.class, (Class) Double.class,// null,
                         (Class) String.class, (Class) Instant.class, (Class) Double.class, (Class) Long.class  // null
                 );
 
@@ -122,16 +132,16 @@ public class DataHttpConverterTest {
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsExactly(
-                        "France", parse("2001-01-01T01:01:01.001Z"), 1.1, 1L, true,
-                        "Norway", parse("2002-02-02T02:02:02.002Z"), 2.2, 2L, false,
-                        "Sweden", parse("2003-03-03T03:03:03.003Z"), 3.3, 3L, true,
-                        "Denmark", parse("2004-04-04T04:04:04.004Z"), 4.4, 4L, null,
-                        "Italy", parse("2005-05-05T05:05:05.005Z"), 5.5, 5L, null
+                        "France", parse("2001-01-01T01:01:01.001Z"), 1.1, 1L, true, 1L, 1.5,
+                        "Norway", parse("2002-02-02T02:02:02.002Z"), 2.2, 2L, false, -1L, -1.5,
+                        "Sweden", parse("2003-03-03T03:03:03.003Z"), 3.3, 3L, true, 2L, 2.25,
+                        "Denmark", parse("2004-04-04T04:04:04.004Z"), 4.4, 4L, null, -9L, -2.25,
+                        "Italy", parse("2005-05-05T05:05:05.005Z"), 5.5, 5L, null, null, null
                 );
     }
 
     @Test
-    public void testCanRead() throws Exception {
+    public void testCanRead() {
         softly.assertThat(
 
                 converter.canRead(TYPE.getType(), null, APPLICATION_SSB_DATASET_DATA_JSON_V2)
@@ -153,7 +163,7 @@ public class DataHttpConverterTest {
     }
 
     @Test
-    public void canWrite() throws Exception {
+    public void canWrite() {
 
         softly.assertThat(
 

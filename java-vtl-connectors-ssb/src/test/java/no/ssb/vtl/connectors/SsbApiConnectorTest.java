@@ -84,26 +84,26 @@ public class SsbApiConnectorTest {
         );
 
         assertThat(dataset.getDataStructure().getTypes()).containsOnly(
-                entry("Dode3", Number.class),
-                entry("Fodselsoverskudd4", Number.class),
-                entry("Fodte2", Number.class),
-                entry("Folketallet11", Number.class),
-                entry("Folketilvekst10", Number.class),
-                entry("Fraflytting8", Number.class),
-                entry("Innvandring5", Number.class),
-                entry("Nettoinnflytting9", Number.class),
+                entry("Dode3", Double.class),
+                entry("Fodselsoverskudd4", Double.class),
+                entry("Fodte2", Double.class),
+                entry("Folketallet11", Double.class),
+                entry("Folketilvekst10", Double.class),
+                entry("Fraflytting8", Double.class),
+                entry("Innvandring5", Double.class),
+                entry("Nettoinnflytting9", Double.class),
                 entry("Region", String.class),
                 entry("Tid", String.class),
-                entry("Tilflytting7", Number.class),
-                entry("Utvandring6", Number.class)
+                entry("Tilflytting7", Double.class),
+                entry("Utvandring6", Double.class)
         );
 
         assertThat(dataset.getData())
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsSequence(
-                        30308, 75, 79, 72, "0101", 70, 26, 82, "2014K3",
-                        387, -3, 425, 30328, 95, 20, 63, "0101", 42, 68, 49, "2014K4"
+                        30308L, 75L, 79L, 72L, "0101", 70L, 26L, 82L, "2014K3",
+                        387L, -3L, 425L, 30328L, 95L, 20L, 63L, "0101", 42L, 68L, 49L, "2014K4"
                 );
 
     }

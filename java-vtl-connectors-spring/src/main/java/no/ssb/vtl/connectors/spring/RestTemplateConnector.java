@@ -35,10 +35,11 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RequestCallback;
 import org.springframework.web.client.ResponseExtractor;
-import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -52,6 +53,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
@@ -74,8 +76,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class RestTemplateConnector implements Connector {
 
     private static final Logger log = LoggerFactory.getLogger(RestTemplateConnector.class);
+    private static final ParameterizedTypeReference<Stream<DataPoint>> DATAPOINT_STREAM_TYPE;
 
-    public static final ParameterizedTypeReference<Stream<DataPoint>> DATAPOINT_STREAM_TYPE;
+    public static Integer DEFAULT_BUFFER_SIZE = 1000;
 
     //@formatter:off
     static {
@@ -85,32 +88,40 @@ public class RestTemplateConnector implements Connector {
 
     private final AsyncTaskExecutor executorService;
     private final WrappedRestTemplate template;
+    private final Integer bufferSize;
 
     public RestTemplateConnector(RestTemplate template, Executor executorService) {
         this(template, new TaskExecutorAdapter(checkNotNull(executorService)));
     }
 
     public RestTemplateConnector(RestTemplate template, AsyncTaskExecutor executorService) {
+        this(template, executorService, null);
+    }
+
+    private RestTemplateConnector(RestTemplate template, AsyncTaskExecutor executorService, Integer bufferSize) {
         this.template = new WrappedRestTemplate(checkNotNull(template));
         this.executorService = checkNotNull(executorService);
-
+        this.bufferSize = Optional.ofNullable(bufferSize).orElse(DEFAULT_BUFFER_SIZE);
     }
 
     private Stream<DataPoint> getData(URI uri) {
 
-        // Where the magic happens. We wrap the blocking queue in a Spliterator and let another thread handle the
+        // We wrap the blocking queue in a Spliterator and let another thread handle the
         // connection and deserialization.
 
-        final BlockingQueue<DataPoint> queue = Queues.newArrayBlockingQueue(100);
+        final BlockingQueue<DataPoint> queue = Queues.newArrayBlockingQueue(bufferSize);
         final AtomicReference<Exception> exception = new AtomicReference<>();
         final Thread reader = Thread.currentThread();
-
+        final CountDownLatch latch = new CountDownLatch(1);
+        log.debug("opening stream for {} (queue {})", uri, queue.hashCode());
         Future<Void> task = executorService.submit(() -> {
 
             try {
                 RequestCallback requestCallback = template.httpEntityCallback(null, DATAPOINT_STREAM_TYPE.getType());
 
                 template.execute(uri, HttpMethod.GET, requestCallback, response -> {
+
+                    latch.countDown();
 
                     ResponseExtractor<ResponseEntity<Stream<DataPoint>>> extractor;
                     extractor = template.responseEntityExtractor(DATAPOINT_STREAM_TYPE.getType());
@@ -124,14 +135,15 @@ public class RestTemplateConnector implements Connector {
                             DataPoint e = it.next();
                             queue.put(e);
                         }
+
                         queue.put(BlockingQueueSpliterator.EOS);
+                        log.debug("done streaming for {} (queue {})", uri, queue.hashCode());
 
                     } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                        log.debug("interrupted while pushing datapoints from {} (queue {})", uri, queue.hashCode());
                         reader.interrupt();
-                        log.debug("interrupted while pushing datapoints to {}", queue);
                     } catch (Exception e) {
-                        log.debug("error while pushing datapoints to {}", queue, e);
+                        log.debug("error while pushing datapoints from {} (queue {})", uri, queue.hashCode(), e);
                         exception.set(e);
                         reader.interrupt();
                     }
@@ -139,17 +151,27 @@ public class RestTemplateConnector implements Connector {
                 });
 
             } catch (Exception e) {
-                log.error("read error", e);
+                log.error("error while reading {} data (queue {})", uri, queue.hashCode(), e);
                 exception.set(e);
                 reader.interrupt();
             }
             return null;
         });
 
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            // Keep the interrupt flag.
+            Thread.currentThread().interrupt();
+        }
+
         Spliterator<DataPoint> spliterator = new BlockingQueueSpliterator(queue, task, exception);
         Stream<DataPoint> stream = StreamSupport.stream(spliterator, false);
 
-        return stream.onClose(() -> task.cancel(true));
+        return stream.onClose(() -> {
+            log.debug("closing stream for {} (queue {})", uri, queue.hashCode());
+            task.cancel(true);
+        });
     }
 
     private DataStructure getStructure(URI uri) {
@@ -161,12 +183,12 @@ public class RestTemplateConnector implements Connector {
         try {
             Set<HttpMethod> allowed = template.optionsForAllow(uri);
             if (allowed.contains(HttpMethod.HEAD)) {
-                // TODO: Maybe check for content types?
                 template.headForHeaders(uri);
-
             }
-        } catch (RestClientResponseException rcre) {
-            return false;
+        } catch (HttpClientErrorException hcre) {
+            if (HttpStatus.NOT_FOUND.equals(hcre.getStatusCode()))
+                return false;
+            throw hcre;
         }
         return true;
     }
@@ -177,7 +199,7 @@ public class RestTemplateConnector implements Connector {
             URI uri = new URI(identifier);
             return checkResourceExists(uri);
         } catch (URISyntaxException e) {
-            log.warn("Got invalid URI");
+            log.warn("could not convert {} to URI", identifier, e);
         }
         return false;
     }
@@ -255,8 +277,14 @@ public class RestTemplateConnector implements Connector {
 
         @Override
         public String toString() {
+            URI uriWithoutQuery;
+            try {
+                uriWithoutQuery = new URI(uri.getScheme(), uri.getHost(), uri.getPath(), null);
+            } catch (URISyntaxException e) {
+                uriWithoutQuery = uri;
+            }
             return toStringHelper(this)
-                    .add("uri", uri)
+                    .add("uri", uriWithoutQuery)
                     .toString();
         }
 

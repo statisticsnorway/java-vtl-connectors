@@ -115,7 +115,7 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      */
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
-        return canWrite(TypeToken.of(type), mediaType);
+        return type != null && canWrite(TypeToken.of(type), mediaType);
     }
 
     /**
@@ -140,7 +140,7 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
     @Override
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
         // TODO: Maybe use context?
-        return canRead(TypeToken.of(type), mediaType);
+        return type != null && canRead(TypeToken.of(type), mediaType);
     }
 
     @Override

@@ -20,11 +20,15 @@ package no.ssb.vtl.connectors.spring.converters;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
@@ -41,6 +45,7 @@ import org.springframework.mock.http.MockHttpOutputMessage;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +58,7 @@ import static no.ssb.vtl.model.Component.Role.ATTRIBUTE;
 import static no.ssb.vtl.model.Component.Role.IDENTIFIER;
 import static no.ssb.vtl.model.Component.Role.MEASURE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class DatasetHttpMessageConverterTest {
 
@@ -77,9 +83,17 @@ public class DatasetHttpMessageConverterTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         converter = new DatasetHttpMessageConverter(mapper);
+    }
+
+    @Test
+    public void testHandleNullType() {
+        assertThat(converter.canRead(null, null, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON)).isFalse();
+        assertThat(converter.canWrite(null, null, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON)).isFalse();
     }
 
     @Test
@@ -113,7 +127,7 @@ public class DatasetHttpMessageConverterTest {
 
         DataStructure structure1 = DataStructure.builder()
                 .put("Id1", IDENTIFIER, String.class)
-                .put("Me2", MEASURE, String.class)
+                .put("Me2", MEASURE, Number.class)
                 .put("Id2", IDENTIFIER, String.class)
                 .put("At2", ATTRIBUTE, String.class)
                 .put("Me1", MEASURE, String.class)
@@ -122,7 +136,7 @@ public class DatasetHttpMessageConverterTest {
 
         DataStructure structure2 = DataStructure.builder()
                 .put("At2", ATTRIBUTE, String.class)
-                .put("Me2", MEASURE, String.class)
+                .put("Me2", MEASURE, Number.class)
                 .put("At1", ATTRIBUTE, String.class)
                 .put("Me1", MEASURE, String.class)
                 .put("Id2", IDENTIFIER, String.class)
@@ -148,6 +162,43 @@ public class DatasetHttpMessageConverterTest {
         converter.write(dataset2, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage2);
 
         assertThat(outputMessage1.getBodyAsString()).isEqualTo(outputMessage2.getBodyAsString());
+
+    }
+
+    @Test
+    public void testWriteEmptyDatasetVersion2() throws Exception {
+
+        HttpInputMessage message = loadFile("ssb.dataset+json;version=2" + ".empty.json");
+        Dataset result = (Dataset) converter.read(Dataset.class, message);
+
+        MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+        converter.write(result, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage);
+
+        // Go full circle!
+        JsonNode original = mapper.readTree(loadFile("ssb.dataset+json;version=2" + ".empty.json").getBody());
+        JsonNode written = mapper.readTree(outputMessage.getBodyAsBytes());
+
+        assertThat(written).isEqualTo(original);
+    }
+
+    @Test
+    public void testSerializationFail() {
+
+        DataStructure structure = DataStructure.builder().put("id", IDENTIFIER, String.class).build();
+        LinkedHashMap<String, Object> data = Maps.newLinkedHashMap();
+
+        // Failing stream.
+        TestDataset dataset = new TestDataset(structure, null);
+
+        MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
+
+        assertThatThrownBy(() -> {
+            converter.write(dataset, DatasetHttpMessageConverter.APPLICATION_DATASET_JSON, outputMessage);
+        })
+                .isExactlyInstanceOf(JsonGenerationException.class)
+                .hasCauseExactlyInstanceOf(NullPointerException.class)
+                .hasMessageContaining("Failed to serialize dataset");
+
 
     }
 
