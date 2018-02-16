@@ -39,7 +39,6 @@ import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
-import no.ssb.vtl.model.Order;
 import org.kohsuke.MetaInfServices;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -213,14 +212,6 @@ public class SsbKlassApiConnector implements Connector {
                 @Override
                 public Optional<Long> getSize() {
                     return Optional.empty();
-                }
-
-                @Override
-                public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
-                    return Optional.of(getData().sorted(orders).filter(filtering).map(o -> {
-                        // TODO
-                        return o;
-                    }));
                 }
             };
 

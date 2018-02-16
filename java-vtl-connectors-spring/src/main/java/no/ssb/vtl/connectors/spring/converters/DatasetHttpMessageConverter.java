@@ -36,7 +36,6 @@ import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
-import no.ssb.vtl.model.Order;
 import no.ssb.vtl.model.VTLObject;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
@@ -52,7 +51,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.TreeSet;
@@ -268,14 +266,6 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
             @Override
             public Optional<Long> getSize() {
                 return Optional.empty();
-            }
-
-            @Override
-            public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
-                return Optional.of(getData().sorted(orders).filter(filtering).map(o -> {
-                    // TODO
-                    return o;
-                }));
             }
         };
     }
