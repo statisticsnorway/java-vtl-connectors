@@ -70,6 +70,7 @@ import static no.ssb.vtl.model.Order.BY_ROLE;
  * A converter that support the following conversions
  * <p>
  * Read:
+ * application/ssb.dataset+json;version=2 -> DataStructure
  * application/ssb.dataset+json;version=2 -> Stream<DataPoint>
  * <p>
  * Write:
@@ -130,6 +131,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     private boolean canRead(TypeToken<?> token, MediaType mediaType) {
         return canRead(mediaType) && (token.isSupertypeOf(STREAM_TYPE_TOKEN) ||
+                token.isSupertypeOf(DataStructure.class) ||
                 token.isSupertypeOf(Dataset.class));
     }
 
