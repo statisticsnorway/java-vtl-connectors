@@ -17,7 +17,7 @@
 
     <groupId>no.ssb.vtl.connectors</groupId>
     <artifactId>java-vtl-connectors-parent</artifactId>
-    <version>0.1.9-SNAPSHOT</version>
+    <version>0.1.9</version>
     <packaging>pom</packaging>
 
     <modules>
