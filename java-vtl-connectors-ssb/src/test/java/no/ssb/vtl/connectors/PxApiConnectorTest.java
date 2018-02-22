@@ -22,6 +22,7 @@ package no.ssb.vtl.connectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import no.ssb.vtl.connectors.util.IdentifierConverter;
 import no.ssb.vtl.model.Component.Role;
@@ -50,7 +51,7 @@ public class PxApiConnectorTest {
     
     @Before
     public void setUp() {
-        connector = new PxApiConnector("http://data.ssb.no/api/v0/no/table/");
+        connector = new PxApiConnector(Lists.newArrayList("http://data.ssb.no/api/v0/no/table/"));
         mockServer = MockRestServiceServer.createServer(connector.getRestTemplate());
     }
     

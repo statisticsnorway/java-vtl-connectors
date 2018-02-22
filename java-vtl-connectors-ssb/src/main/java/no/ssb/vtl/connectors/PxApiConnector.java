@@ -33,6 +33,7 @@ import org.springframework.web.client.RestClientException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -40,16 +41,22 @@ import static java.lang.String.format;
 
 public class PxApiConnector extends JsonStatConnector{
     
-    private final String baseUrl;
+    private final List<String> baseUrls;
 
-    public PxApiConnector(String baseUrl) {
-        checkNotNull(baseUrl);
-        this.baseUrl = baseUrl;
+    public PxApiConnector(List<String> baseUrls) {
+        checkNotNull(baseUrls);
+        this.baseUrls = baseUrls;
     }
 
     @Override
     public boolean canHandle(String identifier) {
-        return identifier.startsWith(baseUrl);
+        for (String baseUrl : baseUrls) {
+            if (identifier.startsWith(baseUrl)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     @Override
