@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.Component;
@@ -317,13 +318,20 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
             generator.writeArrayFieldStart(DATA_FIELD_NAME);
 
+            // Build an index map
+            List<Integer> index = Lists.newArrayListWithCapacity(structure.size());
+            for (String column : sortedStructure.keySet()) {
+                int indexOf = structure.indexOf(structure.get(column));
+                index.add(indexOf);
+            }
+
             try (Stream<DataPoint> data = dataset.getData()) {
                 Iterator<DataPoint> it = data.iterator();
                 while (it.hasNext()) {
-                    Map<Component, VTLObject> next = structure.asMap(it.next());
+                    DataPoint next = it.next();
                     generator.writeStartArray(next.size());
-                    for (Component component : sortedStructure.values()) {
-                        mapper.writeValue(generator, next.get(component).get());
+                    for (Integer pos : index) {
+                        mapper.writeValue(generator, next.get(pos).get());
                     }
                     generator.writeEndArray();
                 }
