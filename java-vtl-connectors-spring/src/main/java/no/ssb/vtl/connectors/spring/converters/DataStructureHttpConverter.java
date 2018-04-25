@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataStructure;
 import org.springframework.http.HttpInputMessage;
@@ -36,8 +37,11 @@ import org.springframework.http.converter.HttpMessageNotWritableException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static no.ssb.vtl.model.Order.BY_NAME;
+import static no.ssb.vtl.model.Order.BY_ROLE;
 
 /**
  * A converter that can read and write data structures.
@@ -120,7 +124,8 @@ public class DataStructureHttpConverter extends AbstractHttpMessageConverter<Dat
     }
 
     void writeWithParser(DataStructure dataStructure, JsonGenerator generator) throws IOException {
-        for (Map.Entry<String, Component> variable : dataStructure.entrySet()) {
+        DataStructure sortedDatastructure = sortDataStructure(dataStructure);
+        for (Map.Entry<String, Component> variable : sortedDatastructure.entrySet()) {
             Component component = variable.getValue();
 
             generator.writeStartObject();
@@ -129,6 +134,15 @@ public class DataStructureHttpConverter extends AbstractHttpMessageConverter<Dat
             generator.writeStringField("type", RoleMapping.fromType(component.getType()).name());
             generator.writeEndObject();
         }
+    }
+
+    /**
+     * Sort the given DataStructure by role and then name.
+     */
+    static DataStructure sortDataStructure(DataStructure structure) {
+        TreeSet<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
+        sortedEntrySet.addAll(structure.entrySet());
+        return DataStructure.builder().putAll(sortedEntrySet).build();
     }
 
     private static class DataStructureWrapper {
