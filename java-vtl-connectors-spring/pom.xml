@@ -8,11 +8,11 @@
     <parent>
         <groupId>no.ssb.vtl.connectors</groupId>
         <artifactId>java-vtl-connectors-parent</artifactId>
-        <version>0.1.12-SNAPSHOT</version>
+        <version>0.1.12</version>
     </parent>
 
     <artifactId>spring-connector</artifactId>
-    <version>0.1.12-SNAPSHOT</version>
+    <version>0.1.12</version>
 
     <name>Java VTL Spring connector</name>
 
