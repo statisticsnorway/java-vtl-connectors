@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
@@ -63,7 +62,6 @@ import java.util.stream.StreamSupport;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.lang.String.format;
 import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
-import static no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter.APPLICATION_SSB_DATASET_STRUCTURE_JSON;
 import static no.ssb.vtl.model.Order.BY_NAME;
 import static no.ssb.vtl.model.Order.BY_ROLE;
 
@@ -71,14 +69,13 @@ import static no.ssb.vtl.model.Order.BY_ROLE;
  * A converter that support the following conversions
  * <p>
  * Read:
- * application/ssb.dataset+json;version=2 -> DataStructure
  * application/ssb.dataset+json;version=2 -> Stream<DataPoint>
+ * application/ssb.dataset+json;version=2 -> Dataset
  * <p>
  * Write:
  * <p>
  * Dataset -> application/ssb.dataset+json;version=2
  * Dataset -> application/ssb.dataset.data+json;version=2
- * Dataset -> application/ssb.dataset.structure+json;version=2
  */
 public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConverter {
 
@@ -94,7 +91,6 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     // @formatter:off
     private static final TypeToken<Stream<DataPoint>> STREAM_TYPE_TOKEN = new TypeToken<Stream<DataPoint>>() {};
-    private static final TypeReference<List<Object>> LIST_TYPE_REFERENCE = new TypeReference<List<Object>>() {};
     // @formatter:on
 
     @VisibleForTesting
@@ -103,7 +99,6 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     static {
         SUPPORTED_TYPES = new ArrayList<>();
         SUPPORTED_TYPES.add(APPLICATION_DATASET_JSON);
-        SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_STRUCTURE_JSON);
         SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_DATA_JSON_V2);
     }
 
@@ -113,13 +108,6 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         structureConverter = new DataStructureHttpConverter(objectMapper);
     }
 
-    private DatasetHttpMessageConverter() {
-        this(new ObjectMapper());
-    }
-
-    /*
-     * @see
-     */
     @Override
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
         return type != null && canRead(TypeToken.of(type), mediaType);
@@ -132,7 +120,6 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     private boolean canRead(TypeToken<?> token, MediaType mediaType) {
         return canRead(mediaType) && (token.isSupertypeOf(STREAM_TYPE_TOKEN) ||
-                token.isSupertypeOf(DataStructure.class) ||
                 token.isSupertypeOf(Dataset.class));
     }
 
@@ -145,12 +132,8 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
         TypeToken<?> token = TypeToken.of(clazz);
         return canWrite(mediaType) && (token.isSubtypeOf(STREAM_TYPE_TOKEN) ||
-                token.isSubtypeOf(DataStructure.class) ||
                 token.isSubtypeOf(Dataset.class));
     }
-
-
-
 
     @Override
     public List<MediaType> getSupportedMediaTypes() {
