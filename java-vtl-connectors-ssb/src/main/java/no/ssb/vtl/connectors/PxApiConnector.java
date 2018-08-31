@@ -20,16 +20,20 @@ package no.ssb.vtl.connectors;
  * =========================LICENSE_END==================================
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
 import no.ssb.jsonstat.v2.DatasetBuildable;
 import no.ssb.vtl.connectors.util.IdentifierConverter;
 import no.ssb.vtl.model.Dataset;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponents;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -71,15 +75,11 @@ public class PxApiConnector extends JsonStatConnector{
             int urlParameterIndex = identifier.indexOf("?");
             String query = identifier.substring(urlParameterIndex +1);
             String url = identifier.substring(0, urlParameterIndex);
-    
+
             RequestEntity requestEntity = RequestEntity.post(new URI(url))
                     .accept(MediaType.APPLICATION_JSON).body(IdentifierConverter.toJson(query));
-    
-            ResponseEntity<Map<String, DatasetBuildable>> exchange = getRestTemplate().exchange(
-                    "{url}",
-                    HttpMethod.POST,
-                    requestEntity, ref, url);
-            
+
+            ResponseEntity<Map<String, DatasetBuildable>> exchange = getRestTemplate().exchange(requestEntity, ref);
     
             if (!exchange.getBody().values().iterator().hasNext()) {
                 throw new NotFoundException(format("empty dataset returned for the identifier %s", identifier));
@@ -87,7 +87,7 @@ public class PxApiConnector extends JsonStatConnector{
 
             return buildDataset(exchange);
         
-        } catch ( URISyntaxException | RestClientException rce) {
+        } catch (IllegalArgumentException | URISyntaxException | RestClientException rce) {
             String statusCode = "";
             if (rce instanceof HttpStatusCodeException) {
                 statusCode = String.valueOf(((HttpStatusCodeException) rce).getStatusCode().value());

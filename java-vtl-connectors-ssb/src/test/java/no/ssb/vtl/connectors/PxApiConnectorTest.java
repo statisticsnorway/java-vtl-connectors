@@ -36,6 +36,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -103,8 +106,6 @@ public class PxApiConnectorTest {
         boolean canHandle = connector.canHandle("http://data.ssb.no/api/v0/no/table/09220");
         assertThat(canHandle).isTrue();
     }
-    
-    
 }
 
 
