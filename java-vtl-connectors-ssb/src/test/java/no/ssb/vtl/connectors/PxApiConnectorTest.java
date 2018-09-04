@@ -35,9 +35,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,7 +62,7 @@ public class PxApiConnectorTest {
         InputStream fileStream = Resources.getResource(this.getClass(), "/09220.json").openStream();
         InputStream queryStream = Resources.getResource(this.getClass(), "/query.json").openStream();
         JsonNode queryJson = new ObjectMapper().readTree(queryStream);
-    
+
         mockServer.expect(requestTo("http://data.ssb.no/api/v0/no/table/09220"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(queryJson.toString()))
@@ -71,7 +70,7 @@ public class PxApiConnectorTest {
                         new InputStreamResource(fileStream),
                         MediaType.APPLICATION_JSON)
                 );
-    
+
         Dataset dataset = connector.getDataset("http://data.ssb.no/api/v0/no/table/09220?"+
                 IdentifierConverter.toQueryString(queryJson.toString()));
         assertThat(dataset).isNotNull();
@@ -101,10 +100,25 @@ public class PxApiConnectorTest {
                 );
     }
     
-    @Test
-    public void canHandle() {
-        boolean canHandle = connector.canHandle("http://data.ssb.no/api/v0/no/table/09220");
-        assertThat(canHandle).isTrue();
+    @Test(expected = ConnectorException.class)
+    public void canHandle() throws ConnectorException, IOException, URISyntaxException {
+
+        InputStream fileStream = Resources.getResource(this.getClass(), "/09220.json").openStream();
+        InputStream queryStream = Resources.getResource(this.getClass(), "/query.json").openStream();
+        JsonNode queryJson = new ObjectMapper().readTree(queryStream);
+        String notAbsolute = "//data.ssb.no/api/v0/no/table/09220/../";
+
+        mockServer.expect(requestTo(notAbsolute))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(queryJson.toString()))
+                .andRespond(withSuccess(
+                        new InputStreamResource(fileStream),
+                        MediaType.APPLICATION_JSON)
+                );
+
+        Dataset dataset = connector.getDataset(notAbsolute + "?" +
+                IdentifierConverter.toQueryString(queryJson.toString()));
+        assertThat(dataset).isNotNull();
     }
 }
 

@@ -35,6 +35,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponents;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -73,20 +74,31 @@ public class PxApiConnector extends JsonStatConnector{
         try {
 
             int urlParameterIndex = identifier.indexOf("?");
-            String query = identifier.substring(urlParameterIndex +1);
+            String query = identifier.substring(urlParameterIndex + 1);
             String url = identifier.substring(0, urlParameterIndex);
 
-            RequestEntity requestEntity = RequestEntity.post(new URI(url))
+
+            URI uri;
+            try {
+                uri = new URI(url).toURL().toURI();
+            } catch (IllegalArgumentException | MalformedURLException e) {
+                throw new ConnectorException(
+                        format("invalid url: %s", url),
+                        e
+                );
+            }
+
+            RequestEntity requestEntity = RequestEntity.post(uri)
                     .accept(MediaType.APPLICATION_JSON).body(IdentifierConverter.toJson(query));
 
             ResponseEntity<Map<String, DatasetBuildable>> exchange = getRestTemplate().exchange(requestEntity, ref);
-    
+
             if (!exchange.getBody().values().iterator().hasNext()) {
                 throw new NotFoundException(format("empty dataset returned for the identifier %s", identifier));
             }
 
             return buildDataset(exchange);
-        
+
         } catch (IllegalArgumentException | URISyntaxException | RestClientException rce) {
             String statusCode = "";
             if (rce instanceof HttpStatusCodeException) {
