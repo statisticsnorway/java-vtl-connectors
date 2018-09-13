@@ -123,7 +123,11 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      * @see #canWrite(Class, MediaType)
      */
     private boolean canWrite(TypeToken<?> token, MediaType mediaType) {
-        return token.isSubtypeOf(SUPPORTED_TYPE) && canRead(mediaType);
+        try {
+            return token.isSubtypeOf(SUPPORTED_TYPE) && canRead(mediaType);
+        } catch (AssertionError e) {
+            return false;
+        }
     }
 
     /**
