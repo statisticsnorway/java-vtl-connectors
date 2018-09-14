@@ -153,11 +153,11 @@ public class DataHttpConverterTest {
 
         softly.assertThat(
 
-                converter.canRead(ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2)
+                converter.canRead(StreamSubClass.class, APPLICATION_SSB_DATASET_DATA_JSON_V2)
 
         ).as(
                 "supports reading subclass %s with media type %s",
-                ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
+                StreamSubClass.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
 
         ).isFalse();
     }
@@ -176,15 +176,15 @@ public class DataHttpConverterTest {
 
         softly.assertThat(
 
-                converter.canWrite(ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2)
+                converter.canWrite(StreamSubClass.class, APPLICATION_SSB_DATASET_DATA_JSON_V2)
 
         ).as(
                 "supports writing subclass %s with media type %s",
-                ExetendedStream.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
+                StreamSubClass.class, APPLICATION_SSB_DATASET_DATA_JSON_V2
         ).isTrue();
     }
 
-    private interface ExetendedStream extends Stream<DataPoint> {}
+    private interface StreamSubClass extends Stream<DataPoint> {}
 
     private HttpInputMessage loadFile(String name) throws IOException {
         InputStream stream = getResource(name).openStream();
