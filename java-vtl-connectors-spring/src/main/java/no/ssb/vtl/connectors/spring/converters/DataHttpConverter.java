@@ -124,8 +124,11 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      */
     private boolean canWrite(TypeToken<?> token, MediaType mediaType) {
         try {
-            return token.isSubtypeOf(SUPPORTED_TYPE) && canRead(mediaType);
+            return canRead(mediaType) && token.isSubtypeOf(SUPPORTED_TYPE);
         } catch (AssertionError e) {
+            // isSubTypeOf can throw AssertionError if the type is not supported.
+            // this can happen if the type passed to canWrite or canRead is
+            // ResolvableType.NONE.
             return false;
         }
     }
@@ -164,7 +167,14 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      * @see #canRead(Class, MediaType)
      */
     private boolean canRead(TypeToken<?> token, MediaType mediaType) {
-        return token.isSupertypeOf(SUPPORTED_TYPE) && canRead(mediaType);
+        try {
+            return canRead(mediaType) && token.isSupertypeOf(SUPPORTED_TYPE);
+        } catch (AssertionError e) {
+            // isSubTypeOf can throw AssertionError if the type is not supported.
+            // this can happen if the type passed to canWrite or canRead is
+            // ResolvableType.NONE.
+            return false;
+        }
     }
 
     @Override
