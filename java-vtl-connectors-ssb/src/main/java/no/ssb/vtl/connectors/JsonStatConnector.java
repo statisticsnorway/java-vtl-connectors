@@ -57,7 +57,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Arrays.asList;
 
 public abstract class JsonStatConnector implements Connector {
-    private final ObjectMapper mapper;
+    protected final ObjectMapper mapper;
     private final RestTemplate restTemplate;
 
     public JsonStatConnector(ObjectMapper mapper) {

@@ -99,7 +99,7 @@ public abstract class CachedConnector extends ForwardingConnector {
                 };
             });
         } catch (ExecutionException e) {
-            throw new RuntimeException("cache error", e.getCause());
+            throw new ConnectorException("cache error", e.getCause());
         }
     }
 
