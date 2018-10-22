@@ -114,8 +114,9 @@ public class RestTemplateConnector implements Connector {
         final Thread reader = Thread.currentThread();
         final CountDownLatch latch = new CountDownLatch(1);
         log.debug("opening stream for {} (queue {})", uri, queue.hashCode());
+        final String parentThreadName = Thread.currentThread().getName();
         Future<Void> task = executorService.submit(() -> {
-
+            Thread.currentThread().setName(Thread.currentThread().getName() + " - calling thread: " + parentThreadName);
             try {
                 RequestCallback requestCallback = template.httpEntityCallback(null, DATAPOINT_STREAM_TYPE.getType());
 
