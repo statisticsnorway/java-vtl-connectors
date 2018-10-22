@@ -22,9 +22,7 @@ package no.ssb.vtl.connectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import no.ssb.jsonstat.v2.DatasetBuildable;
@@ -35,12 +33,9 @@ import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.DatapointNormalizer;
 import no.ssb.vtl.model.Dataset;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.AsyncClientHttpRequest;
-import org.springframework.http.client.AsyncClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -49,24 +44,23 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static no.ssb.vtl.model.Component.Role.IDENTIFIER;
 
 public class PxApiConnector extends JsonStatConnector {
 
@@ -82,7 +76,7 @@ public class PxApiConnector extends JsonStatConnector {
         this.baseUrls = baseUrls;
 
         // Add support for structure deserialization.
-        SimpleModule module = new SimpleModule();
+        SimpleModule module = new SimpleModule("SSB structure deserializer");
         module.addDeserializer(DataStructure.class, new DataStructureDeserializer());
         this.mapper.registerModule(module);
 
@@ -118,10 +112,7 @@ public class PxApiConnector extends JsonStatConnector {
                     rcre
             );
         } catch (ResourceAccessException rae) {
-            throw new ConnectorException(
-                    format("could not contact %s", uri),
-                    rae
-            );
+            throw new ConnectorException(format("could not contact %s", uri), rae);
         } catch (Exception e) {
             throw new ConnectorException("unknown error", e);
         }
@@ -133,7 +124,7 @@ public class PxApiConnector extends JsonStatConnector {
                     removeQuery(uri), HttpMethod.POST, createEntity(uri, structure), TYPE_REFERENCE);
         } catch (RestClientResponseException rcre) {
             throw new ConnectorException(
-                    format("fetching metadata from %s returned %s", uri, rcre.getRawStatusCode()),
+                    format("fetching data from %s returned %s", uri, rcre.getRawStatusCode()),
                     rcre
             );
         } catch (ResourceAccessException rae) {
@@ -166,6 +157,8 @@ public class PxApiConnector extends JsonStatConnector {
             return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(),
                     uri.getPort(), uri.getPath(), null, uri.getFragment());
         } catch (URISyntaxException use) {
+            // Since we are building the new URI from a URI object, this exception
+            // really should never occur.
             throw new ConnectorException(format("could not remove query from %s", uri));
         }
 
@@ -178,18 +171,16 @@ public class PxApiConnector extends JsonStatConnector {
         }
         // Px api can decide not to return all the identifier variables if they are marked with "elimination".
         // Here we make sure that all the identifier in the query are present.
-        Set<String> queryVariables = Stream.of(uri.getQuery().split("&"))
-                .filter(s -> s.contains("="))
-                .map(s -> s.split("=")[0])
+
+        Set<String> queryVariables = extractVariables(uri.getQuery());
+
+        Set<String> identifiers = structure.getRoles().entrySet()
+                .stream()
+                .filter(e -> IDENTIFIER.equals(e.getValue()))
+                .map(e -> e.getKey())
                 .collect(Collectors.toSet());
 
-        Sets.SetView<String> missingVariables = Sets.difference(structure.keySet(), queryVariables);
-        String missingQuery = Stream.concat(missingVariables.stream()
-                .filter(s -> !s.isEmpty())
-                .filter(s -> structure.get(s).isIdentifier())
-                .filter(s -> !queryVariables.contains(s)), queryVariables.contains("ContentsCode") ? Stream.empty() : Stream.of("ContentsCode"))
-                .map(s -> s.concat("=all(*)"))
-                .collect(Collectors.joining("&"));
+        String missingQuery = buildMissingQuery(identifiers, queryVariables);
 
         try {
             return new HttpEntity<>(IdentifierConverter.toJson(String.join("&", query, missingQuery)));
@@ -197,6 +188,22 @@ public class PxApiConnector extends JsonStatConnector {
             throw new ConnectorException(format("could not create query from %s", uri), e);
         }
 
+    }
+
+    @VisibleForTesting
+    String buildMissingQuery(Set<String> structure, Set<String> queryVariables) {
+        Set<String> structureWithContent = Sets.union(structure, ImmutableSet.of("ContentsCode"));
+        Sets.SetView<String> missingVariables = Sets.difference(structureWithContent, queryVariables);
+        return missingVariables.stream().map(s -> s.concat("=all(*)")).collect(Collectors.joining("&"));
+    }
+
+    @VisibleForTesting
+    Set<String> extractVariables(String query) {
+        return Stream.of(query.split("&"))
+                .filter(s -> s.contains("="))
+                .map(s -> s.split("=")[0])
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
     }
 
     private class AsyncDataset implements Dataset {
@@ -211,9 +218,16 @@ public class PxApiConnector extends JsonStatConnector {
 
         @Override
         public Stream<DataPoint> getData() {
+            return StreamSupport.stream(this::spliterator, Spliterator.IMMUTABLE, false);
+        }
+
+        private Spliterator<DataPoint> spliterator() {
             try {
                 Dataset dataset = buildDataset(this.dataset.get());
-                return dataset.getData().map(new DatapointNormalizer(dataset.getDataStructure(), getDataStructure()));
+                DatapointNormalizer normalizer = new DatapointNormalizer(dataset.getDataStructure(), getDataStructure());
+                return dataset.getData()
+                        .map(normalizer)
+                        .spliterator();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } catch (ExecutionException e) {
