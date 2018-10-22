@@ -22,6 +22,7 @@ package no.ssb.vtl.connectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import no.ssb.jsonstat.v2.DatasetBuildable;
@@ -100,6 +101,9 @@ public class PxApiConnector extends JsonStatConnector {
         return false;
     }
 
+    /**
+     * Fetches the data structure.
+     */
     private DataStructure fetchStructure(URI uri) throws ConnectorException {
         try {
             return getRestTemplate().getForObject(removeQuery(uri), DataStructure.class);
@@ -115,6 +119,9 @@ public class PxApiConnector extends JsonStatConnector {
         }
     }
 
+    /**
+     * Fetches the data asynchronously.
+     */
     private ListenableFuture<ResponseEntity<Map<String, DatasetBuildable>>> fetchData(URI uri, DataStructure structure) throws ConnectorException {
         try {
             return asyncRestTemplate.exchange(
@@ -137,7 +144,7 @@ public class PxApiConnector extends JsonStatConnector {
         try {
             URI uri = new URI(identifier);
             DataStructure structure = fetchStructure(uri);
-            return new AsyncDataset(structure, fetchData(uri, structure));
+            return new PxDataset(uri, structure, fetchData(uri, structure));
         } catch (URISyntaxException use) {
             throw new ConnectorException(format("invalid uri %s", identifier), use);
         } catch (Exception e) {
@@ -149,6 +156,9 @@ public class PxApiConnector extends JsonStatConnector {
         }
     }
 
+    /**
+     * Create a new URI based on the given URI without the query part.
+     */
     private URI removeQuery(URI uri) throws ConnectorException {
         try {
             return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(),
@@ -161,13 +171,21 @@ public class PxApiConnector extends JsonStatConnector {
 
     }
 
+    /**
+     * Create a {@link HttpEntity}<{@link JsonNode}> out of a URI.
+     * <p>
+     * The query part of the URI can contain filters (@see {@link IdentifierConverter}).
+     * <p>
+     * When variables are marked with elimination:true, the values are not returned unless a
+     * selection is made (https://bit.ly/2J9xA2F), so we make sure that all variables described by
+     * the {@link DataStructure} are present in the query.
+     */
     private HttpEntity<JsonNode> createEntity(URI uri, DataStructure structure) throws ConnectorException {
         String query = uri.getQuery();
         if (query == null) {
             throw new ConnectorException(format("missing query in %s", uri));
         }
-        // Px api can decide not to return all the identifier variables if they are marked with "elimination".
-        // Here we make sure that all the identifier in the query are present.
+        //
 
         Set<String> queryVariables = extractVariables(uri.getQuery());
 
@@ -203,19 +221,23 @@ public class PxApiConnector extends JsonStatConnector {
                 .collect(Collectors.toSet());
     }
 
-    private class AsyncDataset implements Dataset {
+    private class PxDataset implements Dataset {
+
+        private final URI uri;
 
         private final DataStructure structure;
         private final Future<ResponseEntity<Map<String, DatasetBuildable>>> dataset;
 
-        private AsyncDataset(DataStructure structure, Future<ResponseEntity<Map<String, DatasetBuildable>>> dataset) {
+        private PxDataset(URI uri, DataStructure structure, Future<ResponseEntity<Map<String, DatasetBuildable>>> dataset) {
+            this.uri = checkNotNull(uri);
             this.structure = checkNotNull(structure);
             this.dataset = checkNotNull(dataset);
         }
 
         @Override
         public Stream<DataPoint> getData() {
-            return StreamSupport.stream(this::spliterator, Spliterator.IMMUTABLE, false);
+            return StreamSupport.stream(this::spliterator, Spliterator.IMMUTABLE, false)
+                    .onClose(() -> dataset.cancel(false));
         }
 
         private Spliterator<DataPoint> spliterator() {
@@ -245,6 +267,13 @@ public class PxApiConnector extends JsonStatConnector {
         @Override
         public DataStructure getDataStructure() {
             return structure;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("uri", uri)
+                    .toString();
         }
     }
 
