@@ -21,12 +21,11 @@ package no.ssb.vtl.connectors;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import no.ssb.jsonstat.v2.DatasetBuildable;
-import no.ssb.vtl.connectors.px.DataStructureDeserializer;
+import no.ssb.vtl.connectors.px.PxModule;
 import no.ssb.vtl.connectors.util.IdentifierConverter;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
@@ -76,9 +75,7 @@ public class PxApiConnector extends JsonStatConnector {
         this.baseUrls = baseUrls;
 
         // Add support for structure deserialization.
-        SimpleModule module = new SimpleModule("SSB structure deserializer");
-        module.addDeserializer(DataStructure.class, new DataStructureDeserializer());
-        this.mapper.registerModule(module);
+        this.mapper.registerModule(new PxModule());
 
         RestTemplate originalTemplate = getRestTemplate();
         SimpleClientHttpRequestFactory asyncClientHttpRequestFactory =
@@ -103,7 +100,7 @@ public class PxApiConnector extends JsonStatConnector {
         return false;
     }
 
-    public DataStructure fetchStructure(URI uri) throws ConnectorException {
+    private DataStructure fetchStructure(URI uri) throws ConnectorException {
         try {
             return getRestTemplate().getForObject(removeQuery(uri), DataStructure.class);
         } catch (RestClientResponseException rcre) {
@@ -118,7 +115,7 @@ public class PxApiConnector extends JsonStatConnector {
         }
     }
 
-    public ListenableFuture<ResponseEntity<Map<String, DatasetBuildable>>> fetchData(URI uri, DataStructure structure) throws ConnectorException {
+    private ListenableFuture<ResponseEntity<Map<String, DatasetBuildable>>> fetchData(URI uri, DataStructure structure) throws ConnectorException {
         try {
             return asyncRestTemplate.exchange(
                     removeQuery(uri), HttpMethod.POST, createEntity(uri, structure), TYPE_REFERENCE);
@@ -177,7 +174,7 @@ public class PxApiConnector extends JsonStatConnector {
         Set<String> identifiers = structure.getRoles().entrySet()
                 .stream()
                 .filter(e -> IDENTIFIER.equals(e.getValue()))
-                .map(e -> e.getKey())
+                .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
         String missingQuery = buildMissingQuery(identifiers, queryVariables);

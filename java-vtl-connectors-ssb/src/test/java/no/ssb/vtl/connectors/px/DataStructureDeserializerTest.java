@@ -21,7 +21,6 @@ package no.ssb.vtl.connectors.px;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.io.Resources;
 import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataStructure;
@@ -39,11 +38,9 @@ public class DataStructureDeserializerTest {
     private ObjectMapper mapper;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         mapper = new ObjectMapper();
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(DataStructure.class, new DataStructureDeserializer());
-        mapper.registerModule(module);
+        mapper.registerModule(new PxModule());
     }
 
     @Test

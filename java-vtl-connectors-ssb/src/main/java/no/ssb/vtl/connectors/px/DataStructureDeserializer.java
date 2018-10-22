@@ -37,7 +37,7 @@ public final class DataStructureDeserializer extends StdDeserializer<DataStructu
     public static final String MEASURE_NAME = "ContentsCode";
     public static final String VALUES_FIELD_NAME = "values";
 
-    public DataStructureDeserializer() {
+    DataStructureDeserializer() {
         super(DataStructure.class);
     }
 
