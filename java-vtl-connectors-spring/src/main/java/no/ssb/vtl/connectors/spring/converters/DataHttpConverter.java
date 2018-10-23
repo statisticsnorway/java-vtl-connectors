@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.SequenceWriter;
 import com.google.common.reflect.TypeToken;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.VTLObject;
+import org.springframework.core.ResolvableType;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -115,6 +116,9 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      */
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
+        if (type == ResolvableType.NONE.getType()) {
+            return false;
+        }
         return type != null && canWrite(TypeToken.of(type), mediaType);
     }
 
@@ -123,14 +127,7 @@ public class DataHttpConverter extends AbstractGenericHttpMessageConverter<Strea
      * @see #canWrite(Class, MediaType)
      */
     private boolean canWrite(TypeToken<?> token, MediaType mediaType) {
-        try {
-            return canRead(mediaType) && token.isSubtypeOf(SUPPORTED_TYPE);
-        } catch (AssertionError e) {
-            // isSubTypeOf can throw AssertionError if the type is not supported.
-            // this can happen if the type passed to canWrite or canRead is
-            // ResolvableType.NONE.
-            return false;
-        }
+        return canRead(mediaType) && token.isSubtypeOf(SUPPORTED_TYPE);
     }
 
     /**
