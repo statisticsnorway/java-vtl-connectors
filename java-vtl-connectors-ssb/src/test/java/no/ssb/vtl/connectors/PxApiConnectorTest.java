@@ -22,6 +22,7 @@ package no.ssb.vtl.connectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import no.ssb.vtl.connectors.util.IdentifierConverter;
@@ -38,6 +39,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -47,21 +49,47 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 public class PxApiConnectorTest {
-    
+
     private MockRestServiceServer mockServer;
     private PxApiConnector connector;
-    
+
     @Before
     public void setUp() {
         connector = new PxApiConnector(Lists.newArrayList("http://data.ssb.no/api/v0/no/table/"));
         mockServer = MockRestServiceServer.createServer(connector.getRestTemplate());
     }
-    
+
+    @Test
+    public void testExtractVariables() {
+        Set<String> variables = connector.extractVariables(
+                "Region=all(*)&Eierskap=01+02-03+98&ContentsCode=Antall1&Tid=top(3)");
+        assertThat(variables).containsExactlyInAnyOrder("Region", "Eierskap", "ContentsCode", "Tid");
+    }
+
+    @Test
+    public void testBuildMissingQuery() {
+        Set<String> identifiers = ImmutableSet.of("Region", "Eierskap", "Tid");
+        Set<String> variables = ImmutableSet.of("Region");
+
+        String query = connector.buildMissingQuery(identifiers, variables);
+        assertThat(query).isEqualTo("Eierskap=all(*)&Tid=all(*)&ContentsCode=all(*)");
+
+        Set<String> variablesWithContentsCodes = ImmutableSet.of("Region", "ContentsCode");
+        query = connector.buildMissingQuery(identifiers, variablesWithContentsCodes);
+        assertThat(query).isEqualTo("Eierskap=all(*)&Tid=all(*)");
+    }
+
     @Test
     public void getDataset() throws Exception {
         InputStream fileStream = Resources.getResource(this.getClass(), "/09220.json").openStream();
+        InputStream metaStream = Resources.getResource(this.getClass(), "/09220-metadata.json").openStream();
         InputStream queryStream = Resources.getResource(this.getClass(), "/query.json").openStream();
         JsonNode queryJson = new ObjectMapper().readTree(queryStream);
+
+        mockServer.expect(requestTo("http://data.ssb.no/api/v0/no/table/09220"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        new InputStreamResource(metaStream), MediaType.APPLICATION_JSON));
 
         mockServer.expect(requestTo("http://data.ssb.no/api/v0/no/table/09220"))
                 .andExpect(method(HttpMethod.POST))
@@ -71,54 +99,33 @@ public class PxApiConnectorTest {
                         MediaType.APPLICATION_JSON)
                 );
 
-        Dataset dataset = connector.getDataset("http://data.ssb.no/api/v0/no/table/09220?"+
+        Dataset dataset = connector.getDataset("http://data.ssb.no/api/v0/no/table/09220?" +
                 IdentifierConverter.toQueryString(queryJson.toString()));
         assertThat(dataset).isNotNull();
-    
+
         assertThat(dataset.getDataStructure().getRoles()).containsOnly(
                 entry("Region", Role.IDENTIFIER),
                 entry("Eierskap", Role.IDENTIFIER),
                 entry("Antall1", Role.MEASURE),
                 entry("Tid", Role.IDENTIFIER)
         );
-    
+
         assertThat(dataset.getDataStructure().getTypes()).containsOnly(
                 entry("Region", String.class),
                 entry("Eierskap", String.class),
                 entry("Antall1", Double.class),
                 entry("Tid", String.class)
         );
-    
+
         assertThat(dataset.getData())
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsSequence(
-                        "0","01",2195L,"1987",
-                        "0","01",2357L,"1988",
-                        "0","01",2495L,"1989",
-                        "0","02-03",82L,"1987"
+                        "0", "01", "2015", 2821L,
+                        "0", "01", "2016", 2774L,
+                        "0", "01", "2017", 2722L,
+                        "0", "02-03", "2015", 15L
                 );
-    }
-    
-    @Test(expected = ConnectorException.class)
-    public void canHandle() throws ConnectorException, IOException, URISyntaxException {
-
-        InputStream fileStream = Resources.getResource(this.getClass(), "/09220.json").openStream();
-        InputStream queryStream = Resources.getResource(this.getClass(), "/query.json").openStream();
-        JsonNode queryJson = new ObjectMapper().readTree(queryStream);
-        String notAbsolute = "//data.ssb.no/api/v0/no/table/09220/../";
-
-        mockServer.expect(requestTo(notAbsolute))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(content().string(queryJson.toString()))
-                .andRespond(withSuccess(
-                        new InputStreamResource(fileStream),
-                        MediaType.APPLICATION_JSON)
-                );
-
-        Dataset dataset = connector.getDataset(notAbsolute + "?" +
-                IdentifierConverter.toQueryString(queryJson.toString()));
-        assertThat(dataset).isNotNull();
     }
 }
 
