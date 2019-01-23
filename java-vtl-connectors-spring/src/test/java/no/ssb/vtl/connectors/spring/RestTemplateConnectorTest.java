@@ -9,9 +9,9 @@ package no.ssb.vtl.connectors.spring;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,7 @@ import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
-import no.ssb.vtl.model.Order;
+import no.ssb.vtl.model.VtlOrdering;
 import org.junit.Test;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -96,7 +96,6 @@ public class RestTemplateConnectorTest {
         );
 
 
-
         Dataset dataset = restTemplateConnector.getDataset("dataset");
         Stream<DataPoint> data = dataset.getData();
         data.forEach(System.out::println);
@@ -115,11 +114,11 @@ public class RestTemplateConnectorTest {
                 .put("id4", Component.Role.IDENTIFIER, String.class)
                 .build();
 
-        Order order = Order.create(structure)
-                .put("id1", Order.Direction.ASC)
-                .put("id3", Order.Direction.DESC)
-                .put("id2", Order.Direction.DESC)
-                .put("id4", Order.Direction.ASC)
+        VtlOrdering order = VtlOrdering.using(structure)
+                .asc("id1")
+                .desc("id3")
+                .desc("id2")
+                .asc("id4")
                 .build();
 
 
@@ -143,11 +142,11 @@ public class RestTemplateConnectorTest {
                 .put("id4", Component.Role.IDENTIFIER, String.class)
                 .build();
 
-        Order order = Order.create(structure)
-                .put("id1", Order.Direction.ASC)
-                .put("id3", Order.Direction.DESC)
-                .put("id2", Order.Direction.DESC)
-                .put("id4", Order.Direction.ASC)
+        VtlOrdering order = VtlOrdering.using(structure)
+                .asc("id1")
+                .desc("id3")
+                .desc("id2")
+                .asc("id4")
                 .build();
 
         UriComponentsBuilder orderUri = RestTemplateConnector.createOrderUri(uriWithOrder.cloneBuilder().cloneBuilder(), order, structure);

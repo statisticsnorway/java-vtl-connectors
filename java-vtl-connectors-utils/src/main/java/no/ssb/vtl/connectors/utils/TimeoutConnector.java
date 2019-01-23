@@ -24,12 +24,16 @@ import no.ssb.vtl.connectors.Connector;
 import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.Dataset;
+import no.ssb.vtl.model.Filtering;
+import no.ssb.vtl.model.Ordering;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -102,16 +106,23 @@ public class TimeoutConnector extends ForwardingConnector {
             }
 
             @Override
-            public Stream<DataPoint> getData() {
-                Stream<DataPoint> dataStream = super.getData();
-                // Register timeout task and cancel it if the stream is closed.
-                ScheduledFuture<?> timeoutTask = scheduleTimeoutFor(dataStream, this);
+            public Optional<Stream<DataPoint>> getData(Ordering orders, Filtering filtering, Set<String> components) {
+                return dataset.getData(orders, filtering, components).map(this::wrap);
+            }
 
-                return dataStream.onClose(
+            private Stream<DataPoint> wrap(Stream<DataPoint> stream) {
+                // Register timeout task and cancel it if the stream is closed.
+                ScheduledFuture<?> timeoutTask = scheduleTimeoutFor(stream, this);
+                return stream.onClose(
                         createCancelTask(
-                                timeoutTask, dataStream, this
+                                timeoutTask, stream, this
                         )
                 );
+            }
+
+            @Override
+            public Stream<DataPoint> getData() {
+                return wrap(dataset.getData());
             }
         };
     }

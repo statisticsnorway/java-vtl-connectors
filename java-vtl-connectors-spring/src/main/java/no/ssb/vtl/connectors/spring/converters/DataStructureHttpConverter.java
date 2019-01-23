@@ -40,8 +40,8 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static no.ssb.vtl.model.Order.BY_NAME;
-import static no.ssb.vtl.model.Order.BY_ROLE;
+import static no.ssb.vtl.model.VtlOrdering.BY_NAME;
+import static no.ssb.vtl.model.VtlOrdering.BY_ROLE;
 
 /**
  * A converter that can read and write data structures.

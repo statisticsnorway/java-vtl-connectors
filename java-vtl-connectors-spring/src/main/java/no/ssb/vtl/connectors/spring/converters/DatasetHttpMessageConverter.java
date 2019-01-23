@@ -9,9 +9,9 @@ package no.ssb.vtl.connectors.spring.converters;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
@@ -44,6 +45,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -62,8 +64,8 @@ import java.util.stream.StreamSupport;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.lang.String.format;
 import static no.ssb.vtl.connectors.spring.converters.DataHttpConverter.APPLICATION_SSB_DATASET_DATA_JSON_V2;
-import static no.ssb.vtl.model.Order.BY_NAME;
-import static no.ssb.vtl.model.Order.BY_ROLE;
+import static no.ssb.vtl.model.VtlOrdering.BY_NAME;
+import static no.ssb.vtl.model.VtlOrdering.BY_ROLE;
 
 /**
  * A converter that support the following conversions
@@ -85,27 +87,60 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     public static final String STRUCTURE_FIELD_NAME = "structure";
     public static final String DATA_FIELD_NAME = "data";
-
-    private final DataHttpConverter dataConverter;
-    private final DataStructureHttpConverter structureConverter;
-
-    // @formatter:off
-    private static final TypeToken<Stream<DataPoint>> STREAM_TYPE_TOKEN = new TypeToken<Stream<DataPoint>>() {};
-    // @formatter:on
-
     @VisibleForTesting
     static final List<MediaType> SUPPORTED_TYPES;
+    // @formatter:off
+    private static final TypeToken<Stream<DataPoint>> STREAM_TYPE_TOKEN = new TypeToken<Stream<DataPoint>>() {};
 
     static {
         SUPPORTED_TYPES = new ArrayList<>();
         SUPPORTED_TYPES.add(APPLICATION_DATASET_JSON);
         SUPPORTED_TYPES.add(APPLICATION_SSB_DATASET_DATA_JSON_V2);
     }
+    // @formatter:on
+
+    private final DataHttpConverter dataConverter;
+    private final DataStructureHttpConverter structureConverter;
 
     public DatasetHttpMessageConverter(ObjectMapper objectMapper) {
         super(objectMapper);
         dataConverter = new DataHttpConverter(objectMapper);
         structureConverter = new DataStructureHttpConverter(objectMapper);
+    }
+
+    /**
+     * Sort the given DataStructure by role and then name.
+     */
+    static DataStructure sortDataStructure(DataStructure structure) {
+        TreeSet<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
+        sortedEntrySet.addAll(structure.entrySet());
+        return DataStructure.builder().putAll(sortedEntrySet).build();
+    }
+
+    private static void checkArgument(JsonParser parser, boolean check, String message) throws JsonMappingException {
+        if (!check) {
+            throw JsonMappingException.from(parser, message);
+        }
+    }
+
+    private static void checkArgument(JsonParser parser, boolean check, String message, Object... arg) throws JsonMappingException {
+        if (!check) {
+            throw JsonMappingException.from(parser, format(message, arg));
+        }
+    }
+
+    private static void checkToken(JsonParser parser, JsonToken token, JsonToken expToken) throws JsonMappingException {
+        checkArgument(
+                parser, token == expToken,
+                "Unexpected token (%s), expected %s",
+                token, expToken
+        );
+    }
+
+    private static void checkCurrentName(JsonParser parser, String prop) throws IOException {
+        checkArgument(parser, prop.equals(parser.getCurrentName()), format("Unrecognized field \"%s\", expected \"%s\"",
+                parser.getCurrentName(), prop
+        ));
     }
 
     @Override
@@ -154,7 +189,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
     protected Object readInternal(TypeToken<?> token, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
 
         ObjectMapper mapper = getObjectMapper();
-        JsonParser parser = mapper.getFactory().createParser(inputMessage.getBody());
+        JsonParser parser = mapper.getFactory().createParser(new BufferedInputStream(inputMessage.getBody()));
 
         // Advance to { "": [ <--
         checkToken(parser, parser.nextValue(), JsonToken.START_OBJECT);
@@ -210,7 +245,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
                     } catch (IOException ioe) {
                         if (ioe instanceof JsonMappingException) {
                             JsonMappingException jme = (JsonMappingException) ioe;
-                            throw new RuntimeJsonMappingException(jme.getMessage(),jme);
+                            throw new RuntimeJsonMappingException(jme.getMessage(), jme);
                         } else {
                             throw new RuntimeException(ioe.getMessage(), ioe);
                         }
@@ -303,8 +338,9 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
             // Build an index map
             List<Integer> index = Lists.newArrayListWithCapacity(structure.size());
+            ImmutableList<Component> components = ImmutableList.copyOf(structure.values());
             for (String column : sortedStructure.keySet()) {
-                int indexOf = structure.indexOf(structure.get(column));
+                int indexOf = components.indexOf(structure.get(column));
                 index.add(indexOf);
             }
 
@@ -328,7 +364,7 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
         } catch (Exception ex) {
             Throwable cause = Throwables.getRootCause(ex);
             throw new JsonGenerationException(
-                    format("Failed to serialize dataset: %s", firstNonNull(cause.getMessage(), "no message")                           ),
+                    format("Failed to serialize dataset: %s", firstNonNull(cause.getMessage(), "no message")),
                     cause,
                     generator
             );
@@ -336,38 +372,4 @@ public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConve
 
     }
 
-    /**
-     * Sort the given DataStructure by role and then name.
-     */
-    static DataStructure sortDataStructure(DataStructure structure) {
-        TreeSet<Map.Entry<String, Component>> sortedEntrySet = Sets.newTreeSet(BY_ROLE.thenComparing(BY_NAME));
-        sortedEntrySet.addAll(structure.entrySet());
-        return DataStructure.builder().putAll(sortedEntrySet).build();
-    }
-
-    private static void checkArgument(JsonParser parser, boolean check, String message) throws JsonMappingException {
-        if (!check) {
-            throw JsonMappingException.from(parser, message);
-        }
-    }
-
-    private static void checkArgument(JsonParser parser, boolean check, String message, Object... arg) throws JsonMappingException {
-        if (!check) {
-            throw JsonMappingException.from(parser, format(message, arg));
-        }
-    }
-
-    private static void checkToken(JsonParser parser, JsonToken token, JsonToken expToken) throws JsonMappingException {
-        checkArgument(
-                parser, token == expToken,
-                "Unexpected token (%s), expected %s",
-                token, expToken
-        );
-    }
-
-    private static void checkCurrentName(JsonParser parser, String prop) throws IOException {
-        checkArgument(parser, prop.equals(parser.getCurrentName()), format("Unrecognized field \"%s\", expected \"%s\"",
-                parser.getCurrentName(), prop
-        ));
-    }
 }

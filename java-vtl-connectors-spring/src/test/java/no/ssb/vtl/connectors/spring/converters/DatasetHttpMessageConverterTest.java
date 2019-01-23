@@ -230,7 +230,9 @@ public class DatasetHttpMessageConverterTest {
 
         @Override
         public Stream<DataPoint> getData() {
-            return data.stream().map(structure::fromStringMap);
+            return data.stream().map(map -> {
+                return DataPoint.create(Maps.asMap(structure.keySet(), map::get).values());
+            });
         }
 
         @Override
