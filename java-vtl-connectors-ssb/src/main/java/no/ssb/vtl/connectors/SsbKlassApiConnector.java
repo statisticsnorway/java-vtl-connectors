@@ -200,8 +200,9 @@ public class SsbKlassApiConnector implements Connector {
                 @Override
                 public Stream<DataPoint> getData() {
                     DataStructure dataStructure = getDataStructure();
-                    return rowsExpanded.stream()
-                            .map(dataStructure::fromStringMap);
+                    return rowsExpanded.stream().map(map -> {
+                        return DataPoint.create(Maps.asMap(dataStructure.keySet(), map::get).values().toArray());
+                    });
                 }
 
                 @Override
