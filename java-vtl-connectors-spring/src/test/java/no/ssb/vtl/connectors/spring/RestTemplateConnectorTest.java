@@ -125,7 +125,7 @@ public class RestTemplateConnectorTest {
         UriComponentsBuilder orderUri = RestTemplateConnector.createOrderUri(uri, order);
 
         assertThat(orderUri.build().toUriString())
-                .contains("sort=id1,ASC&sort=id3,id2,DESC&sort=id4,ASC")
+                .contains("sort=id1,ASC&sort=id3,DESC&sort=id2,DESC&sort=id4,ASC")
                 .contains("foo=bar&foo2=bar2");
 
     }
@@ -152,7 +152,7 @@ public class RestTemplateConnectorTest {
         UriComponentsBuilder orderUri = RestTemplateConnector.createOrderUri(uriWithOrder.cloneBuilder().cloneBuilder(), order);
 
         assertThat(orderUri.build().toUriString())
-                .contains("sort=id1,ASC&sort=id3,id2,DESC&sort=id4,ASC")
+                .contains("sort=id1,ASC&sort=id3,DESC&sort=id2,DESC&sort=id4,ASC")
                 .doesNotContain("sort=foo")
                 .contains("other=param");
 
