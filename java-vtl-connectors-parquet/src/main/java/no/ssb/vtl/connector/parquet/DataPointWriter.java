@@ -1,8 +1,7 @@
 package no.ssb.vtl.connector.parquet;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
-import no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.VTLObject;
@@ -15,14 +14,10 @@ import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpOutputMessage;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ListIterator;
 
+import static no.ssb.vtl.connector.parquet.ParquetConnector.MAPPER;
 import static no.ssb.vtl.connector.parquet.ParquetConnector.STRUCTURE_META_NAME;
 
 /**
@@ -46,23 +41,17 @@ public class DataPointWriter extends WriteSupport<DataPoint> {
 
     @Override
     public WriteContext init(Configuration configuration) {
-        // TODO: Extract jackson ser-deser from spring converter to utils.
-        try {
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            new DataStructureHttpConverter(new ObjectMapper()).write(structure, null, new HttpOutputMessage() {
-                @Override
-                public OutputStream getBody() throws IOException {
-                    return output;
-                }
+        return new WriteContext(
+                this.messageType,
+                ImmutableMap.of(STRUCTURE_META_NAME, serializeDataStructure(structure))
+        );
+    }
 
-                @Override
-                public HttpHeaders getHeaders() {
-                    return new HttpHeaders();
-                }
-            });
-            return new WriteContext(this.messageType, ImmutableMap.of(STRUCTURE_META_NAME, output.toString()));
-        } catch (IOException e) {
-            throw new RuntimeException("could not deserialize datastructure");
+    private String serializeDataStructure(DataStructure structure) {
+        try {
+            return MAPPER.writeValueAsString(structure);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("could not serialize data structure");
         }
     }
 

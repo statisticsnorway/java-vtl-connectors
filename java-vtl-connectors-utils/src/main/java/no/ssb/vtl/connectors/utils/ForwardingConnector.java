@@ -45,6 +45,6 @@ public abstract class ForwardingConnector extends ForwardingObject implements Co
 
     @Override
     public Dataset putDataset(String identifier, Dataset dataset) throws ConnectorException {
-        return putDataset(identifier, dataset);
+        return delegate().putDataset(identifier, dataset);
     }
 }

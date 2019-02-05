@@ -24,6 +24,7 @@
         <module>java-vtl-connectors-utils</module>
         <module>java-vtl-connectors-spring</module>
         <module>java-vtl-connectors-ssb</module>
+        <module>java-vtl-connectors-parquet</module>
     </modules>
 
     <name>Java VTL connectors</name>
@@ -156,7 +157,7 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.6.1</version>
+            <version>3.11.1</version>
             <scope>test</scope>
         </dependency>
 

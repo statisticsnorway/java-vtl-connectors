@@ -78,8 +78,8 @@ public class DataPointWriterTest {
                 .put("TJENESTEGRUPPE", ATTRIBUTE, String.class)
                 .build();
 
-        //String name = "8986396a-be56-434e-8491-fd1148d8c2b9";
-        String name = "ba020a95-7810-4ea6-a2e8-08ac56f7e344";
+        String name = "8986396a-be56-434e-8491-fd1148d8c2b9";
+        //String name = "ba020a95-7810-4ea6-a2e8-08ac56f7e344";
 
         Path file = FileSystems.getDefault().getPath(name + ".csv");
         BufferedReader reader = Files.newBufferedReader(file);
@@ -91,6 +91,8 @@ public class DataPointWriterTest {
         ParquetWriter<DataPoint> writer = DataPointWriter.builder(outputFile, dataStructure)
                 .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
                 .withCompressionCodec(CompressionCodecName.SNAPPY)
+                .withPageSize(1048576)
+                .withRowGroupSize(5242880)
                 .withDictionaryEncoding(true)
                 .build();
 
