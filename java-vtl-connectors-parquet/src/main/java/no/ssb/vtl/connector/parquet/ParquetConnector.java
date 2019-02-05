@@ -17,8 +17,6 @@ import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.OutputFile;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
 

@@ -2,6 +2,7 @@ package no.ssb.vtl.connector.parquet;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
+import no.ssb.vtl.model.Component;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.VTLObject;
@@ -13,8 +14,8 @@ import org.apache.parquet.io.RecordConsumerLoggingWrapper;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 import org.apache.parquet.schema.MessageType;
-import org.apache.parquet.schema.PrimitiveType;
 
+import java.time.Instant;
 import java.util.ListIterator;
 
 import static no.ssb.vtl.connector.parquet.ParquetConnector.MAPPER;
@@ -69,11 +70,22 @@ public class DataPointWriter extends WriteSupport<DataPoint> {
             VTLObject value = it.next();
             if (value.get() != null) {
                 consumer.startField(messageType.getFieldName(pos), pos);
-                PrimitiveType.PrimitiveTypeName typeName = messageType.getType(pos).asPrimitiveType().getPrimitiveTypeName();
-                if (typeName.equals(PrimitiveType.PrimitiveTypeName.INT64)) {
+                Component component = structure.get(messageType.getFieldName(pos));
+                Class<?> type = component.getType();
+                // TODO: Use a list of functions to avoid branching.
+                if (String.class.isAssignableFrom(type)) {
+                    consumer.addBinary(Binary.fromString((String) value.get()));
+                } else if (Boolean.class.isAssignableFrom(type)) {
+                    consumer.addBoolean((Boolean) value.get());
+                } else if (Instant.class.isAssignableFrom(type)) {
+                    Instant instant = (Instant) value.get();
+                    consumer.addLong(instant.toEpochMilli());
+                } else if (Long.class.isAssignableFrom(type)) {
                     consumer.addLong((Long) value.get());
+                } else if (Double.class.isAssignableFrom(type)) {
+                    consumer.addDouble((Double) value.get());
                 } else {
-                    consumer.addBinary(Binary.fromCharSequence((CharSequence) value.get()));
+                    throw new IllegalArgumentException("Unsupported component type " + component);
                 }
                 consumer.endField(messageType.getFieldName(pos), pos);
             }

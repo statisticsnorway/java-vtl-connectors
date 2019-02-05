@@ -13,12 +13,10 @@ import java.util.List;
 
 public class DataPointConverter extends GroupConverter {
 
-    private final DataStructure structure;
     private final VtlObjectConverter[] converters;
     private VTLObject[] buffer;
 
     public DataPointConverter(DataStructure structure) {
-        this.structure = structure;
         this.converters = createConverters(structure);
         this.buffer = new VTLObject[converters.length];
     }

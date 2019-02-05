@@ -1,11 +1,7 @@
 package no.ssb.vtl.connector.parquet;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.Maps;
 import no.ssb.vtl.connector.parquet.converters.DataPointMaterializer;
-import no.ssb.vtl.connectors.utils.jackson.DataStructureDeserializer;
-import no.ssb.vtl.connectors.utils.jackson.DataStructureSerializer;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import org.apache.hadoop.conf.Configuration;
@@ -27,7 +23,6 @@ import static no.ssb.vtl.connector.parquet.ParquetConnector.STRUCTURE_META_NAME;
 public class DataPointReader extends ReadSupport<DataPoint> {
 
     private final DataStructureConverter dataStructureConverter = new DataStructureConverter();
-    private final DataStructureDeserializer structureDeserializer = new DataStructureDeserializer();
     private Set<String> columns;
     private DataStructure structure;
 
@@ -91,38 +86,12 @@ public class DataPointReader extends ReadSupport<DataPoint> {
         }
 
         /**
-         * Set of columns to read.
+         * Set of columns to read. This will restrict the amount of read columns.
          */
         public Builder withColumns(Set<String> columns) {
             this.columns = columns;
             return this;
         }
-
-        //@Override
-        //public ParquetReader<DataPoint> build() throws IOException {
-        //    // Read the structure from the file.
-        //    try (ParquetFileReader parquetFile = ParquetFileReader.open(this.file)) {
-        //        Map<String, String> metaData = parquetFile.getFileMetaData().getKeyValueMetaData();
-        //        String structureJson = metaData.get(STRUCTURE_META_NAME);
-        //        // TODO: Extract jackson ser-deser from spring converter to utils.
-        //        DataStructureHttpConverter converter = new DataStructureHttpConverter(new ObjectMapper());
-        //        this.structure = converter.read(DataStructure.class, new HttpInputMessage() {
-        //            @Override
-        //            public InputStream getBody() {
-        //                return new ByteArrayInputStream(structureJson.getBytes());
-        //            }
-//
-        //            @Override
-        //            public HttpHeaders getHeaders() {
-        //                return new HttpHeaders();
-        //            }
-        //        });
-        //        if (columns == null) {
-        //            this.columns = this.structure.keySet();
-        //        }
-        //    }
-        //    return super.build();
-        //}
 
         @Override
         protected ReadSupport<DataPoint> getReadSupport() {

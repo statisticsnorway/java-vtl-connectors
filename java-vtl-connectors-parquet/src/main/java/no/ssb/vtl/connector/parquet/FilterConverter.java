@@ -84,6 +84,14 @@ public class FilterConverter implements BiFunction<DataStructure, FilteringSpeci
     }
 
     private FilterPredicate handleOr(DataStructure structure, Iterator<? extends FilteringSpecification> it) {
+        // TODO: Handle better.
+        it = Iterators.filter(it, o -> {
+            if (o != null) {
+                return o.getOperator() != FilteringSpecification.Operator.TRUE && o.isNegated();
+            } else {
+                return true;
+            }
+        });
         if (it.hasNext()) {
             FilterPredicate left = apply(structure, it.next());
             if (it.hasNext()) {
