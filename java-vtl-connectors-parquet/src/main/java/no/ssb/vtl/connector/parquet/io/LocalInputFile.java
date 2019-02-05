@@ -23,19 +23,21 @@ public final class LocalInputFile {
     private static final int COPY_BUFFER_SIZE = 8192;
 
     public static InputFile nioPathToInputFile(@Nonnull Path file) throws FileNotFoundException {
-        //noinspection ConstantConditions
-        assert file != null;
-
-        final RandomAccessFile input = new RandomAccessFile(file.toFile(), "r");
-
+        long lenght;
+        try (RandomAccessFile input = new RandomAccessFile(file.toFile(), "r")) {
+            lenght = input.length();
+        } catch (IOException e) {
+            throw new FileNotFoundException();
+        }
         return new InputFile() {
             @Override
             public long getLength() throws IOException {
-                return input.length();
+                return lenght;
             }
 
             @Override
             public SeekableInputStream newStream() throws IOException {
+                RandomAccessFile input = new RandomAccessFile(file.toFile(), "r");
                 return new SeekableInputStream() {
                     private final byte[] tmpBuf = new byte[COPY_BUFFER_SIZE];
                     private long markPos = 0;

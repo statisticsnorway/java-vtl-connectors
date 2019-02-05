@@ -1,79 +1,44 @@
 package no.ssb.vtl.connector.parquet;
 
-import no.ssb.vtl.model.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import no.ssb.vtl.connectors.spring.converters.DataStructureHttpConverter;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.VTLObject;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.api.WriteSupport;
 import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.RecordConsumerLoggingWrapper;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
-import org.apache.parquet.schema.ColumnOrder;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
-import org.apache.parquet.schema.Type;
-import org.apache.parquet.schema.Types;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpOutputMessage;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.io.OutputStream;
 import java.util.ListIterator;
-import java.util.Map;
 
-import static org.apache.parquet.schema.OriginalType.TIME_MICROS;
-import static org.apache.parquet.schema.OriginalType.TIME_MILLIS;
-import static org.apache.parquet.schema.OriginalType.UTF8;
-import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
-import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BOOLEAN;
-import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.DOUBLE;
-import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT64;
+import static no.ssb.vtl.connector.parquet.ParquetConnector.STRUCTURE_META_NAME;
 
+/**
+ * Write {@link DataPoint}s to a Parquest file.
+ */
 public class DataPointWriter extends WriteSupport<DataPoint> {
 
     private final MessageType messageType;
+    private final DataStructure structure;
     private RecordConsumer consumer;
 
     private DataPointWriter(DataStructure structure) {
-
-        Types.required(BINARY).as(UTF8).named("test");
-        List<Type> types = new ArrayList<>();
-        for (Map.Entry<String, Component> entry : structure.entrySet()) {
-            types.add(getPrimitiveType(entry));
-        }
-        this.messageType = new MessageType("datapoint", types);
+        this.structure = structure;
+        this.messageType = new DataStructureConverter().apply(structure);
     }
 
-    private static PrimitiveType getPrimitiveType(Map.Entry<String, Component> entry) {
-
-        Component component = entry.getValue();
-        Types.PrimitiveBuilder<PrimitiveType> builder;
-        if (String.class.isAssignableFrom(component.getType())) {
-            builder = getBuilder(component, BINARY).as(UTF8);
-        } else if (Long.class.isAssignableFrom(component.getType())) {
-            builder = (getBuilder(component, INT64));
-        } else if (Double.class.isAssignableFrom(component.getType())) {
-            builder = (getBuilder(component, DOUBLE));
-        } else if (Boolean.class.isAssignableFrom(component.getType())) {
-            builder = (getBuilder(component, BOOLEAN));
-        } else if (Instant.class.isAssignableFrom(component.getType())) {
-            // TODO: Maybe builder = (getBuilder(component, INT64)).as(TIME_MICROS);
-            builder = (getBuilder(component, INT64)).as(TIME_MILLIS);
-        } else {
-            throw new IllegalArgumentException("Unsupported component type " + entry.getValue());
-        }
-        String name = entry.getKey();
-        return builder.named(name);
-    }
-
-    private static Types.PrimitiveBuilder<PrimitiveType> getBuilder(Component component, PrimitiveType.PrimitiveTypeName binary) {
-        return component.isIdentifier() ? Types.required(binary).columnOrder(ColumnOrder.typeDefined()) : Types.optional(binary);
-    }
 
     public static DataPointWriter.Builder builder(OutputFile path, DataStructure structure) {
         return new Builder(path, structure);
@@ -81,7 +46,24 @@ public class DataPointWriter extends WriteSupport<DataPoint> {
 
     @Override
     public WriteContext init(Configuration configuration) {
-        return new WriteContext(this.messageType, Collections.emptyMap());
+        // TODO: Extract jackson ser-deser from spring converter to utils.
+        try {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            new DataStructureHttpConverter(new ObjectMapper()).write(structure, null, new HttpOutputMessage() {
+                @Override
+                public OutputStream getBody() throws IOException {
+                    return output;
+                }
+
+                @Override
+                public HttpHeaders getHeaders() {
+                    return new HttpHeaders();
+                }
+            });
+            return new WriteContext(this.messageType, ImmutableMap.of(STRUCTURE_META_NAME, output.toString()));
+        } catch (IOException e) {
+            throw new RuntimeException("could not deserialize datastructure");
+        }
     }
 
     @Override
@@ -96,22 +78,24 @@ public class DataPointWriter extends WriteSupport<DataPoint> {
         while (it.hasNext()) {
             int pos = it.nextIndex();
             VTLObject value = it.next();
-            consumer.startField(messageType.getFieldName(pos), pos);
-            consumer.addBinary(Binary.fromCharSequence((CharSequence) value.get()));
-            consumer.endField(messageType.getFieldName(pos), pos);
-
+            if (value.get() != null) {
+                consumer.startField(messageType.getFieldName(pos), pos);
+                PrimitiveType.PrimitiveTypeName typeName = messageType.getType(pos).asPrimitiveType().getPrimitiveTypeName();
+                if (typeName.equals(PrimitiveType.PrimitiveTypeName.INT64)) {
+                    consumer.addLong((Long) value.get());
+                } else {
+                    consumer.addBinary(Binary.fromCharSequence((CharSequence) value.get()));
+                }
+                consumer.endField(messageType.getFieldName(pos), pos);
+            }
         }
         consumer.endMessage();
     }
 
+
     public static class Builder extends ParquetWriter.Builder<DataPoint, Builder> {
 
         private final DataStructure structure;
-
-        Builder(Path path, DataStructure structure) {
-            super(path);
-            this.structure = structure;
-        }
 
         Builder(OutputFile path, DataStructure structure) {
             super(path);
