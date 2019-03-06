@@ -17,7 +17,7 @@
 
     <groupId>no.ssb.vtl.connectors</groupId>
     <artifactId>java-vtl-connectors-parent</artifactId>
-    <version>0.1.16</version>
+    <version>0.1.16-1</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -96,12 +96,12 @@
                 <repository>
                     <id>releases</id>
                     <name>SSB Nexus Releases</name>
-                    <url>http://kodehus.ssb.no/content/repositories/releases/</url>
+                    <url>https://nexus.ssb.no/repository/maven-releases/</url>
                 </repository>
                 <snapshotRepository>
                     <id>snapshots</id>
                     <name>SSB Snapshot Repository</name>
-                    <url>http://kodehus.ssb.no/content/repositories/snapshots/</url>
+                    <url>https://nexus.ssb.no/repository/maven-snapshots/</url>
                 </snapshotRepository>
             </distributionManagement>
         </profile>
