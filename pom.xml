@@ -96,12 +96,12 @@
                 <repository>
                     <id>releases</id>
                     <name>SSB Nexus Releases</name>
-                    <url>https://nexus.ssb.no/repository/maven-releases/</url>
+                    <url>http://kodehus.ssb.no/content/repositories/releases/</url>
                 </repository>
                 <snapshotRepository>
                     <id>snapshots</id>
                     <name>SSB Snapshot Repository</name>
-                    <url>https://nexus.ssb.no/repository/maven-snapshots/</url>
+                    <url>http://kodehus.ssb.no/content/repositories/snapshots/</url>
                 </snapshotRepository>
             </distributionManagement>
         </profile>
@@ -150,7 +150,7 @@
         <dependency>
             <groupId>no.ssb.vtl</groupId>
             <artifactId>java-vtl-model</artifactId>
-            <version>0.1.13-SNAPSHOT</version>
+            <version>0.1.11-SNAPSHOT</version>
         </dependency>
 
         <dependency>
