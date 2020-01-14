@@ -119,33 +119,8 @@ public class PxApiConnectorTest {
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsSequence(
-                        "0", "01", "2015", 2821L,
                         "0", "01", "2016", 2774L,
-                        "0", "01", "2017", 2722L,
-                        "0", "02-03", "2015", 15L
+                        "0", "01", "2017", 2722L
                 );
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
