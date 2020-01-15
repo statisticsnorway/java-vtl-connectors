@@ -36,9 +36,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -121,33 +119,8 @@ public class PxApiConnectorTest {
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsSequence(
-                        "0", "01", "2015", 2821L,
                         "0", "01", "2016", 2774L,
-                        "0", "01", "2017", 2722L,
-                        "0", "02-03", "2015", 15L
+                        "0", "01", "2017", 2722L
                 );
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
