@@ -185,7 +185,6 @@ public class PxApiConnector extends JsonStatConnector {
         if (query == null) {
             throw new ConnectorException(format("missing query in %s", uri));
         }
-        //
 
         Set<String> queryVariables = extractVariables(uri.getQuery());
 
