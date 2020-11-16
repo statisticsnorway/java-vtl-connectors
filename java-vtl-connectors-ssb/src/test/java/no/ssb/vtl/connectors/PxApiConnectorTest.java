@@ -54,7 +54,7 @@ public class PxApiConnectorTest {
     @Before
     public void setUp() {
         connector = new PxApiConnector(Lists.newArrayList("http://data.ssb.no/api/v0/no/table/"));
-        mockServer = MockRestServiceServer.createServer(connector.getRestTemplate());
+        mockServer = MockRestServiceServer.createServer(connector.getAsyncRestTemplate());
     }
 
     @Test
@@ -119,8 +119,11 @@ public class PxApiConnectorTest {
                 .flatExtracting(input -> input)
                 .extracting(VTLObject::get)
                 .containsSequence(
-                        "0", "01", "2016", 2774L,
-                        "0", "01", "2017", 2722L
+                        "0", "01", "1987", 2195L,
+                        "0","01", "1988",2357L,
+                        "0", "01", "1989", 2495L,
+                        "0", "02-03", "1987", 82L,
+                        "0", "02-03", "1988", 95L
                 );
     }
 }
