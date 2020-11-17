@@ -80,7 +80,7 @@
 
         <profile>
             <!-- interal distribution for ssb -->
-            <id>ssb</id>
+            <id>ssb-bip</id>
             <repositories>
                 <repository>
                     <id>ssb-bip-releases</id>
