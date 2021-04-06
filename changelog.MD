@@ -6,7 +6,7 @@
 
 ### Changed
 
-## 0.1.7 - 2021-04-06
+## 0.1.17 - 2021-04-06
 
 * Bump json-stat-java to 0.2.6
 * Use async rest template
