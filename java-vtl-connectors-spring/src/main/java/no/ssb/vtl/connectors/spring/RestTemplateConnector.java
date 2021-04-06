@@ -9,9 +9,9 @@ package no.ssb.vtl.connectors.spring;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ package no.ssb.vtl.connectors.spring;
  * =========================LICENSE_END==================================
  */
 
-import com.codepoetics.protonpack.StreamUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Queues;
 import no.ssb.vtl.connectors.Connector;
@@ -28,7 +27,8 @@ import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.DataStructure;
 import no.ssb.vtl.model.Dataset;
-import no.ssb.vtl.model.Order;
+import no.ssb.vtl.model.Filtering;
+import no.ssb.vtl.model.Ordering;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
@@ -37,15 +37,22 @@ import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequest;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.util.Assert;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RequestCallback;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.ResponseExtractor;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +64,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -78,7 +84,7 @@ public class RestTemplateConnector implements Connector {
     private static final Logger log = LoggerFactory.getLogger(RestTemplateConnector.class);
     private static final ParameterizedTypeReference<Stream<DataPoint>> DATAPOINT_STREAM_TYPE;
 
-    public static Integer DEFAULT_BUFFER_SIZE = 1000;
+    public static Integer DEFAULT_BUFFER_SIZE = 32768;
 
     //@formatter:off
     static {
@@ -102,6 +108,16 @@ public class RestTemplateConnector implements Connector {
         this.template = new WrappedRestTemplate(checkNotNull(template));
         this.executorService = checkNotNull(executorService);
         this.bufferSize = Optional.ofNullable(bufferSize).orElse(DEFAULT_BUFFER_SIZE);
+    }
+
+    @VisibleForTesting
+    static UriComponentsBuilder createOrderUri(UriComponentsBuilder uri, Ordering order) {
+        List<String> sortParams = new ArrayList<>();
+        for (String column : order.columns()) {
+            Ordering.Direction direction = order.getDirection(column);
+            sortParams.add(column + "," + direction.toString());
+        }
+        return uri.cloneBuilder().replaceQueryParam("sort", (Object[]) sortParams.toArray(new Object[]{}));
     }
 
     private Stream<DataPoint> getData(URI uri) {
@@ -246,25 +262,49 @@ public class RestTemplateConnector implements Connector {
         protected <T> RequestCallback httpEntityCallback(Object requestBody, Type responseType) {
             return super.httpEntityCallback(requestBody, responseType);
         }
-    }
 
-    @VisibleForTesting
-    static UriComponentsBuilder createOrderUri(UriComponentsBuilder uri, Order order, DataStructure structure) {
+        @Override
+        protected <T> T doExecute(URI url, HttpMethod method, RequestCallback requestCallback, ResponseExtractor<T> responseExtractor) throws RestClientException {
+            Assert.notNull(url, "'url' must not be null");
+            Assert.notNull(method, "'method' must not be null");
+            ClientHttpResponse response = null;
+            try {
+                ClientHttpRequest request = createRequest(url, method);
+                if (requestCallback != null) {
+                    requestCallback.doWithRequest(request);
+                }
+                response = request.execute();
+                handleResponse(url, method, response);
+                if (responseExtractor != null) {
+                    return responseExtractor.extractData(response);
+                } else {
+                    return null;
+                }
+            } catch (IOException ex) {
+                String resource = url.toString();
+                String query = url.getRawQuery();
+                resource = (query != null ? resource.substring(0, resource.indexOf(query) - 1) : resource);
+                throw new ResourceAccessException("I/O error on " + method.name() +
+                        " request for \"" + resource + "\": " + ex.getMessage(), ex);
+            } finally {
+                if (response != null) {
+                    close(response);
+                }
+            }
+        }
 
-        // Add the sort parameter.
-        List<String> sortParams = StreamUtils.aggregate(order.entrySet().stream(), (e1, e2) -> e1.getValue().equals(e2.getValue()))
-                .map(entries -> {
-                    Order.Direction direction = entries.get(0).getValue();
-                    return entries.stream()
-                            .map(Map.Entry::getKey)
-                            .map(structure::getName)
-                            .collect(Collectors.joining(
-                                    ",", "", ",".concat(direction.toString())
-                            ));
-                })
-                .collect(Collectors.toList());
-
-        return uri.cloneBuilder().replaceQueryParam("sort", (Object[]) sortParams.toArray(new Object[]{}));
+        /**
+         * Allows to close the io stream without draining it
+         */
+        private void close(ClientHttpResponse response) {
+            try {
+                if (response.getBody() != null) {
+                    response.getBody().close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private class RestTemplateDataset implements Dataset {
@@ -290,19 +330,10 @@ public class RestTemplateConnector implements Connector {
         }
 
         @Override
-        public Optional<Stream<DataPoint>> getData(Order orders, Filtering filtering, Set<String> components) {
+        public Optional<Stream<DataPoint>> getData(Ordering ordering, Filtering filtering, Set<String> components) {
             UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUri(uri);
-            if (!orders.isEmpty())
-                uriBuilder = createOrderUri(uriBuilder, orders, getDataStructure());
-
-            return Optional.of(RestTemplateConnector.this.getData(uriBuilder.build().toUri()));
-        }
-
-        @Override
-        public Optional<Stream<DataPoint>> getData(Order order) {
-            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUri(uri);
-            UriComponentsBuilder uriWithOrder = createOrderUri(uriBuilder, order, getDataStructure());
-            return Optional.of(RestTemplateConnector.this.getData(uriWithOrder.build().toUri()));
+            UriComponentsBuilder uriWithOrder = createOrderUri(uriBuilder, ordering);
+            return Optional.of(RestTemplateConnector.this.getData(uriWithOrder.build().toUri()).filter(filtering));
         }
 
         @Override

@@ -106,7 +106,7 @@ public class PxApiConnector extends JsonStatConnector {
      */
     private DataStructure fetchStructure(URI uri) throws ConnectorException {
         try {
-            return getRestTemplate().getForObject(removeQuery(uri), DataStructure.class);
+            return asyncRestTemplate.getForEntity(removeQuery(uri), DataStructure.class).get().getBody();
         } catch (RestClientResponseException rcre) {
             throw new ConnectorException(
                     format("fetching metadata from %s returned %s", uri, rcre.getRawStatusCode()),
@@ -185,7 +185,6 @@ public class PxApiConnector extends JsonStatConnector {
         if (query == null) {
             throw new ConnectorException(format("missing query in %s", uri));
         }
-        //
 
         Set<String> queryVariables = extractVariables(uri.getQuery());
 
@@ -219,6 +218,10 @@ public class PxApiConnector extends JsonStatConnector {
                 .map(s -> s.split("=")[0])
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
+    }
+
+    AsyncRestTemplate getAsyncRestTemplate() {
+        return this.asyncRestTemplate;
     }
 
     private class PxDataset implements Dataset {

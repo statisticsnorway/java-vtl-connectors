@@ -9,9 +9,9 @@ package no.ssb.vtl.connectors.spring.nonclosing;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ package no.ssb.vtl.connectors.spring.nonclosing;
  * =========================LICENSE_END==================================
  */
 
-import com.google.common.io.Closer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.AbstractClientHttpRequest;
@@ -116,7 +115,6 @@ public class NonClosingRestTemplate extends RestTemplate {
         Assert.notNull(url, "'url' must not be null");
         Assert.notNull(method, "'method' must not be null");
         ClientHttpResponse response = null;
-        Closer closer = Closer.create();
         try {
             ClientHttpRequest request = createRequest(url, method);
             if (requestCallback != null) {
@@ -126,19 +124,16 @@ public class NonClosingRestTemplate extends RestTemplate {
             handleResponse(url, method, response);
             if (responseExtractor != null) {
                 return responseExtractor.extractData(response);
-            }
-            else {
+            } else {
                 return null;
             }
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             String resource = url.toString();
             String query = url.getRawQuery();
             resource = (query != null ? resource.substring(0, resource.indexOf(query) - 1) : resource);
             throw new ResourceAccessException("I/O error on " + method.name() +
                     " request for \"" + resource + "\": " + ex.getMessage(), ex);
-        }
-        finally {
+        } finally {
             if (response != null && !(response instanceof NonClosingClientHttpResponse)) {
                 response.close();
             }

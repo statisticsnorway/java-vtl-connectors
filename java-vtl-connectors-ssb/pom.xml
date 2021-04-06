@@ -7,11 +7,11 @@
     <parent>
         <groupId>no.ssb.vtl.connectors</groupId>
         <artifactId>java-vtl-connectors-parent</artifactId>
-        <version>0.1.16-2</version>
+        <version>0.1.17</version>
     </parent>
 
     <artifactId>ssb-connector</artifactId>
-    <version>0.1.16-2</version>
+    <version>0.1.17</version>
 
     <name>Java VTL SSB connectors</name>
 
@@ -20,7 +20,7 @@
         <dependency>
             <groupId>no.ssb.jsonstat</groupId>
             <artifactId>json-stat-java</artifactId>
-            <version>0.2.5</version>
+            <version>0.2.6</version>
             <exclusions>
                 <exclusion>
                     <artifactId>guava</artifactId>

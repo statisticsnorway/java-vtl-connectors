@@ -17,7 +17,7 @@
 
     <groupId>no.ssb.vtl.connectors</groupId>
     <artifactId>java-vtl-connectors-parent</artifactId>
-    <version>0.1.16-2</version>
+    <version>0.1.17</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -80,6 +80,32 @@
 
         <profile>
             <!-- interal distribution for ssb -->
+            <id>ssb-bip</id>
+            <repositories>
+                <repository>
+                    <id>ssb-bip-releases</id>
+                    <url>https://nexus.prod-bip-ci.ssb.no/repository/maven-public/</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <distributionManagement>
+                <repository>
+                    <id>ssb-bip-releases</id>
+                    <name>SSB Nexus Releases</name>
+                    <url>https://nexus.prod-bip-ci.ssb.no/repository/maven-releases/</url>
+                </repository>
+                <snapshotRepository>
+                    <id>ssb-bip-snapshots</id>
+                    <name>SSB Snapshot Repository</name>
+                    <url>https://nexus.prod-bip-ci.ssb.no/repository/maven-snapshots/</url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+
+        <profile>
+            <!-- internal distribution for ssb -->
             <id>ssb</id>
             <distributionManagement>
                 <repository>
@@ -149,7 +175,7 @@
         <dependency>
             <groupId>no.ssb.vtl</groupId>
             <artifactId>java-vtl-model</artifactId>
-            <version>0.1.12-3</version>
+            <version>0.1.13</version>
         </dependency>
 
         <dependency>

@@ -30,11 +30,13 @@ import no.ssb.vtl.connectors.Connector;
 import no.ssb.vtl.connectors.ConnectorException;
 import no.ssb.vtl.model.DataPoint;
 import no.ssb.vtl.model.Dataset;
-import no.ssb.vtl.model.Order;
+import no.ssb.vtl.model.Filtering;
+import no.ssb.vtl.model.Ordering;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.ExecutionException;
@@ -112,9 +114,9 @@ public abstract class CachedConnector extends ForwardingConnector {
      */
     private final static class SortedKey {
         private final String identifier;
-        private final Order order;
+        private final Ordering order;
 
-        private SortedKey(String identifier, Order order) {
+        private SortedKey(String identifier, Ordering order) {
             this.identifier = checkNotNull(identifier);
             this.order = checkNotNull(order);
         }
@@ -205,7 +207,14 @@ public abstract class CachedConnector extends ForwardingConnector {
         }
 
         @Override
-        public Optional<Stream<DataPoint>> getData(Order order) {
+        public Optional<Stream<DataPoint>> getData(Ordering orders, Filtering filtering, Set<String> components) {
+            Stream<DataPoint> ordered = getData(orders).orElseThrow(() -> new UnsupportedOperationException("could not"))
+                    .filter(filtering);
+            return Optional.of(ordered);
+        }
+
+        @Override
+        public Optional<Stream<DataPoint>> getData(Ordering order) {
             SortedKey key = new SortedKey(identifier, order);
             ImmutableList<DataPoint> sortedCachedData = sortedCache.getIfPresent(key);
             if (sortedCachedData != null)
