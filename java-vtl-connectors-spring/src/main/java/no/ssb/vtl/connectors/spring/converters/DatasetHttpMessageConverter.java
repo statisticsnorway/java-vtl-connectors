@@ -78,6 +78,8 @@ import static no.ssb.vtl.model.VtlOrdering.BY_ROLE;
  * <p>
  * Dataset -> application/ssb.dataset+json;version=2
  * Dataset -> application/ssb.dataset.data+json;version=2
+ *
+ * TODO: Use DataStructureSerializer and DataStructureDeserializer from util.
  */
 public class DatasetHttpMessageConverter extends MappingJackson2HttpMessageConverter {
 
